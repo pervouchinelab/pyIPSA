@@ -1,0 +1,9 @@
+__pycache__/
+genomes/
+input/
+output/
+introns/
+annotations/
+.idea/
+.git/
+.snakemake/

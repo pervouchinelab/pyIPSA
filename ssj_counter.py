@@ -1,6 +1,6 @@
 import pysam
 import argparse
-from utils import timer
+import sys
 
 BASE = 1
 
@@ -27,7 +27,7 @@ def segment_to_junctions(segment):
     # extracting junctions from cigartuple
     for cigartuple in segment.cigartuples:
 
-        if cigartuple[0] == 0:  # alignment match (M), sequence match (=), sequence mismatch (X)
+        if cigartuple[0] in (0, 7, 8):  # alignment match (M), sequence match (=), sequence mismatch (X)
             segment_pos += cigartuple[1]
             reference_pos += cigartuple[1]
         elif cigartuple[0] == 1:  # insertion to the reference (I)
@@ -55,7 +55,6 @@ def segment_to_junctions(segment):
     return segment_junctions
 
 
-@timer
 def alignment_to_junctions(alignment):
     # dictionary to store different splice junctions with their offsets
     # storing scheme
@@ -79,23 +78,20 @@ def alignment_to_junctions(alignment):
     return all_junctions
 
 
-@timer
-def output(junctions):
+def output_junctions_to_stdout(junctions):
     # yield '\t'.join(('junction_id', 'offset', 'F1', 'R1', 'F2', 'R2')) + '\n'
     for j in junctions:
         line = (j[0], str(j[1]), *map(str, junctions[j]))
         yield '\t'.join(line) + '\n'
 
 
-@timer
 def main():
-    parser = argparse.ArgumentParser(description="Extracting splice junctions data from alignment file")
+    parser = argparse.ArgumentParser(description="Counting reads supporting each splice site junction")
     parser.add_argument("-i", "--input_bam", type=str, metavar="", required=True, help="Input alignment file (BAM)")
-    parser.add_argument("-o", "--output_dir", type=str, metavar="", required=True, help="Output directory")
     cli_args = parser.parse_args()
-    samfile = pysam.AlignmentFile(cli_args.input_bam, 'rb')
-    junctions = alignment_to_junctions(samfile)
-    sys.stdout.writelines(output(junctions))
+    sam_file = pysam.AlignmentFile(cli_args.input_bam, 'rb')
+    junctions_with_counts = alignment_to_junctions(sam_file)
+    sys.stdout.writelines(output_junctions_to_stdout(junctions_with_counts))
 
 
 if __name__ == '__main__':

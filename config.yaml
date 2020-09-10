@@ -1,0 +1,9 @@
+INPUT_DIR: input
+OUTPUT_DIR: output
+MIN_OFFSET: 4
+
+URL_ANNOTATIONS:
+  hg19: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/GRCh37_mapping/gencode.v35lift37.annotation.gtf.gz
+
+URL_GENOMES:
+  hg19: ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/GRCh37_mapping/GRCh37.primary_assembly.genome.fa.gz

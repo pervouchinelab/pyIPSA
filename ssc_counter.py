@@ -1,27 +1,15 @@
 import pysam
+import gzip
+import argparse
 import sys
-import time
 
 BASE = 1
 
 
-def timer(func):
-
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = func(*args, **kwargs)
-        sys.stderr.write(f'Execution time of "{func.__name__}" function: '
-                         f'{round(time.time() - start, 2)} sec\n')
-        return result
-
-    return wrapper
-
-
-@timer
-def junctions_to_sites(filename):
+def junctions_to_splice_sites(filename):
     sites = {}
 
-    with open(filename, 'r') as junctions_file:
+    with gzip.open(filename, 'rt') as junctions_file:
         for line in junctions_file:
             junction_id = line.strip().split('\t')[0]
             reference_name, left, right = junction_id.split('_')
@@ -31,8 +19,7 @@ def junctions_to_sites(filename):
     return sites
 
 
-@timer
-def sites_coverage(alignment, sites):
+def sites_coverage(alignment: pysam.AlignmentFile, sites: dict):
 
     coverage = dict()
 
@@ -66,18 +53,22 @@ def sites_coverage(alignment, sites):
     return coverage
 
 
-@timer
-def output(sites):
+def output_sites_to_stdout(sites):
     for key in sites:
         line = (key[0], str(key[1]), str(sites[key]))
         yield '\t'.join(line) + '\n'
 
 
-@timer
 def main():
-    splicing_sites = junctions_to_sites(sys.argv[1])
-    samfile = pysam.AlignmentFile(sys.argv[2], 'rb')
-    sys.stdout.writelines(output(sites_coverage(samfile, splicing_sites)))
+    parser = argparse.ArgumentParser(description="Counting continuous reads for each splice site")
+    parser.add_argument("-i", "--input_bam", type=str,
+                        metavar="", required=True, help="Input alignment file (BAM)")
+    parser.add_argument("-ssj", "--splice_site_junctions", type=str,
+                        metavar="", required=True, help="Splice site junctions file")
+    cli_args = parser.parse_args()
+    splice_sites = junctions_to_splice_sites(cli_args.splice_site_junctions)
+    samfile = pysam.AlignmentFile(cli_args.input_bam, 'rb')
+    sys.stdout.writelines(output_sites_to_stdout(sites_coverage(samfile, splice_sites)))
 
 
 if __name__ == '__main__':

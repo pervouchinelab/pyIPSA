@@ -1,23 +1,20 @@
-import time
+import argparse
 import pandas as pd
-import sys
+import pysam
+from collections import Counter
 
 
-def timer(func):
-
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = func(*args, **kwargs)
-        sys.stderr.write(f'Execution time of "{func.__name__}" function: '
-                         f'{round(time.time() - start, 2)} sec\n')
-        return result
-
-    return wrapper
-
-
-@timer
-def main():
-    junctions = pd.read_table(sys.argv[1], header=None)
+def print_stats(sam_file, ssj_file):
+    read_lengths = []
+    i = 0
+    with pysam.AlignmentFile(sam_file, "rb") as alignment:
+        for segment in alignment.fetch():
+            read_lengths.append(segment.infer_read_length())
+            i += 1
+            if i == 100000:
+                break
+    print(f"Read length = {Counter(read_lengths).most_common()[0][0]}")
+    junctions = pd.read_table(ssj_file, header=None)
     junctions.columns = ['junction_id', 'offset', 'F1', 'R1', 'F2', 'R2']
     junctions = junctions.set_index(['junction_id', 'offset'])
     # column sums
@@ -44,6 +41,16 @@ def main():
     # offset distribution
     print('Offset distribution:')
     print(junctions.groupby(by='offset').sum().iloc[:, :4].to_string())
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Analyzing the RNA-Seq library type")
+    parser.add_argument("-i", "--input_bam", type=str,
+                        metavar="", required=True, help="Input alignment file (BAM)")
+    parser.add_argument("-ssj", "--splice_site_junctions", type=str,
+                        metavar="", required=True, help="Splice site junctions file")
+    cli_args = parser.parse_args()
+    print_stats(cli_args.input_bam, cli_args.splice_site_junctions)
 
 
 if __name__ == '__main__':
