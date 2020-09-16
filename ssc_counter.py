@@ -26,6 +26,7 @@ def sites_coverage(alignment: pysam.AlignmentFile, sites: dict):
     for segment in alignment.fetch():
 
         reference_name = segment.reference_name
+        segment_type = 2 * segment.is_read2 + segment.is_reverse
         segment_pos = 0
         reference_pos = segment.reference_start + BASE
 
@@ -37,10 +38,9 @@ def sites_coverage(alignment: pysam.AlignmentFile, sites: dict):
                     if sites.get((reference_name, matched_position), False):
                         offset = segment_pos + inc
                         key = (reference_name + '_' + str(matched_position), offset)
-                        if key in coverage:
-                            coverage[key] += 1
-                        else:
-                            coverage[key] = 1
+                        if key not in coverage:
+                            coverage[key] = [0] * 4
+                        coverage[key][segment_type] += 1
 
                 segment_pos += cigartuple[1]
                 reference_pos += cigartuple[1]
@@ -55,7 +55,7 @@ def sites_coverage(alignment: pysam.AlignmentFile, sites: dict):
 
 def output_sites_to_stdout(sites):
     for key in sites:
-        line = (key[0], str(key[1]), str(sites[key]))
+        line = (key[0], str(key[1]), *map(str, sites[key]))
         yield '\t'.join(line) + '\n'
 
 

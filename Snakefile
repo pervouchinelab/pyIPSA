@@ -1,6 +1,12 @@
 import pysam
+import requests
 configfile: "config.yaml"
 samples, = glob_wildcards("input/{sample}.bam")
+
+if not samples:
+    r = requests.get("https://cb.skoltech.ru/tashkeev/miniPCAWG.bam", allow_redirects=True)
+    open(config["INPUT_DIR"] + "/miniPCAWG.bam", "wb").write(r.content)
+
 
 rule all:
     input:

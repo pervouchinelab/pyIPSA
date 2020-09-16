@@ -17,9 +17,9 @@ def add_splice_sites(df, genome):
         ref, start, stop, strand = junction_id.split("_")
         ref, start, stop = "chr" + ref, int(start), int(stop)
         c = strand == "-"
-        n = genome.fetch(ref, start, start + 2) + genome.fetch(ref, stop - 3, stop - 1)
+        n = genome.fetch(ref, start, start + 2).upper() + genome.fetch(ref, stop - 3, stop - 1).upper()
         if c:
-            n = "".join(complement[n] for n in n)
+            n = "".join(complement[n] for n in n)[::-1]
         splice_sites.append(n)
     df["splice_sites"] = splice_sites
     return df
