@@ -4,7 +4,7 @@ configfile: "config.yaml"
 samples, = glob_wildcards("input/{sample}.bam")
 
 if not samples:
-    r = requests.get("https://cb.skoltech.ru/tashkeev/miniPCAWG.bam", allow_redirects=True)
+    r = requests.get("https://cb.skoltech.ru/dp/pyipsa/miniPCAWG.bam", allow_redirects=True)
     open(config["INPUT_DIR"] + "/miniPCAWG.bam", "wb").write(r.content)
 
 
