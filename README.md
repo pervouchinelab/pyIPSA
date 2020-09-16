@@ -1,6 +1,8 @@
 # pyIPSA
 Integrative Pipeline for Splicing Analysis
 
+### Installation & Run
+
 To use this program you must have python environment
 with the following programs and libraries installed:
 - `snakemake`
@@ -25,3 +27,13 @@ must be active
 
 Options for `snakemake` command are available in 
 [snakemake documentation](https://snakemake.readthedocs.io/en/stable/executing/cli.html).
+
+### Working folders
+
+1. `input` - the folder where all BAMs are located
+(1 sample - 1 BAM)
+2. `output` - the folder where all results are saved.
+Each sample has its own directory in this folder.
+3. `genomes` - the folder with FASTA files of genomes
+4. `annotations` - the folder with GTF/GFF files of annotations
+5. `introns` - the folder with annotated introns
