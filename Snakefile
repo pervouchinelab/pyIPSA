@@ -1,12 +1,15 @@
 import pysam
 import requests
+import os
 configfile: "config.yaml"
-samples, = glob_wildcards("input/{sample}.bam")
+samples, = glob_wildcards(config["INPUT_DIR"]+"/{sample}.bam")
 
 if not samples:
     r = requests.get("https://cb.skoltech.ru/dp/pyipsa/miniPCAWG.bam", allow_redirects=True)
+    if not os.path.exists(config["INPUT_DIR"]):
+        os.makedirs(config["INPUT_DIR"])
     open(config["INPUT_DIR"] + "/miniPCAWG.bam", "wb").write(r.content)
-
+    samples = ["miniPCAWG"]
 
 rule all:
     input:
