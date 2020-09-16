@@ -29,8 +29,8 @@ def main():
     parser = argparse.ArgumentParser(description="Annotating splice site junctions")
     parser.add_argument("-ssj", "--splice_site_junctions", type=str,
                         metavar="", required=True, help="Splice junctions file (TSV)")
-    parser.add_argument("-a", "--annotated_splice_sites", type=argparse.FileType("r"),
-                        metavar="", required=True, help="Annotated splice sites file")
+    # parser.add_argument("-a", "--annotated_splice_sites", type=argparse.FileType("r"),
+    #                     metavar="", required=True, help="Annotated splice sites file")
     parser.add_argument("-fa", "--genome_fa", type=str,
                         metavar="", required=True, help="Genome file (FASTA)")
     parser.add_argument("-o", "--output_tsv", type=str,

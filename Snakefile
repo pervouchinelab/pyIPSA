@@ -19,12 +19,11 @@ rule all:
 rule annotate_splice_site_junctions:
     input:
         aggssj=config["OUTPUT_DIR"]+"/{sample}/aggregated.ssj.gz",
-        genome="genomes/hg19.fa",
-        introns="introns/hg19.introns"
+        genome="genomes/hg19.fa"
     output:
         annssj=config["OUTPUT_DIR"]+"/{sample}/annotated.ssj.gz"
     shell:
-        "python annotate.py -ssj {input.aggssj} -o {output.annssj} -fa {input.genome} -a {input.introns}"
+        "python annotate.py -ssj {input.aggssj} -o {output.annssj} -fa {input.genome}"
 
 
 rule aggregate_splice_site_junctions:
