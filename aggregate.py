@@ -6,7 +6,11 @@ from collections import namedtuple
 NewRow = namedtuple("Pandas", ["junction_id", "offset", "count"])
 
 
-def library_params(library_file):
+def library_params(library_file: str) -> (int, bool, bool):
+    """
+    This function reads a library analysis file and returns read length
+    inferred from the alignment, and two booleans: is the data paired-end
+    """
     with open(library_file, "r") as lf:
         read_length = int(lf.readline().split("=")[1])
         [lf.readline() for _ in range(5)]
@@ -56,7 +60,7 @@ def aggregate_ssj(ssj):
         staggered_count=pd.NamedAgg(column="count", aggfunc="count"),
         entropy=pd.NamedAgg(column="count", aggfunc=lambda x: np.log2(x.sum()) - (np.sum(x * np.log2(x)) / x.sum()))
     )
-    agg_ssj["entropy"] = np.round(agg_ssj["entropy"], 6)
+    agg_ssj["entropy"] = np.round(agg_ssj["entropy"], 2)
     return agg_ssj
 
 
