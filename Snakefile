@@ -1,3 +1,4 @@
+# TODO: rewrite the whole file
 import pysam
 import requests
 import os
@@ -45,7 +46,7 @@ rule analyze_library:
     output:
         log=config["OUTPUT_DIR"]+"/{sample}/library_analysis.txt"
     shell:
-        "python library_analyzer.py -i {input.bam} -ssj {input.ssj} > {output.log}"
+        "python analyzer.py -i {input.bam} -ssj {input.ssj} > {output.log}"
 
 rule count_splice_site_continuous:
     input:

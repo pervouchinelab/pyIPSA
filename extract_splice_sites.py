@@ -111,9 +111,10 @@ def exons_to_junctions(exons: Iterator[Exon], min_intron_length: int) -> Iterato
     for ref_name, strand, exons in transcripts.values():
         for i in range(1, len(exons)):
             junctions.add((ref_name, str(exons[i-1][1]), str(exons[i][0]), strand))
+
     # sorting them
     junctions = sorted(junctions)
-    
+
     for ref_name, start, end, strand in junctions:
         yield "\t".join((ref_name, str(start), str(end), strand)) + "\n"
 

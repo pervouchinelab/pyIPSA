@@ -57,6 +57,7 @@ def junctions_to_splice_sites(filename: str):
     # reading junctions file
     with gzip.open(filename, 'rt') as junctions_file:
         for line in junctions_file:
+            # TODO: fix case with chr10_KAAFSA_110_150
             junction_id = line.strip().split('\t')[0]
             # splitting junction id
             ref_name, left, right = junction_id.split('_')

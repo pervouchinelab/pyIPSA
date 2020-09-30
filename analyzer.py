@@ -1,7 +1,24 @@
+# TODO: rewrite the whole file
 import argparse
 import pandas as pd
 import pysam
 from collections import Counter
+
+
+def parse_cli_args():
+    """Parses command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="""
+            Extracts splice junctions (introns) from the annotation file
+            They are stored as 1-based positions of flanking nucleotides
+            """
+    )
+    parser.add_argument(
+        "-o", "--output", type=str, metavar="FILE", required=True,
+        help="Output gzipped file with splice junctions", dest="tsv"
+    )
+    args = parser.parse_args()
+    return vars(args)
 
 
 def print_stats(sam_file, ssj_file):

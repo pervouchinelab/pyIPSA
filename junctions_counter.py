@@ -81,6 +81,7 @@ def segment_to_junctions(segment: pysam.AlignedSegment):
                 str(ref_pos - 1),  # last position of the left exon (offset)
                 str(ref_pos + cigar_tuple[1])  # first position of the right exon
             ))
+            # TODO: update dictionary with junctions right here without saving to list etc.
             junction_with_read_type = JunctionWithReadType(junction_id=junction_id,
                                                            offset=seg_pos,
                                                            read_type=seg_type)
