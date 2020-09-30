@@ -36,4 +36,5 @@ Options for `snakemake` command are available in
 Each sample has its own directory in this folder.
 3. `genomes` - the folder with FASTA files of genomes
 4. `annotations` - the folder with GTF/GFF files of annotations
-5. `introns` - the folder with annotated introns
+5. `known_splice_junctions` - the folder with annotated splice junctions
+6. `deprecated` - the folder with old scripts not used in workflow
