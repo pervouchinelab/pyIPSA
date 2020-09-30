@@ -44,9 +44,9 @@ def parse_cli_args():
     return vars(args)
 
 
-def segment_to_junctions(segment: pysam.AlignedSegment):
-    """Takes a read (AlignedSegment) as input and returns
-     a list of junctions found in the read"""
+def segment_to_junctions(segment: pysam.AlignedSegment, junctions_with_counts: defaultdict):
+    """Takes a read (AlignedSegment) and dictionary of junctions with counts
+     as input. Then updates the dictionary with new data from extracted from the read"""
 
     # name of reference sequence where read is aligned
     ref_name = segment.reference_name
@@ -57,9 +57,6 @@ def segment_to_junctions(segment: pysam.AlignedSegment):
     # initial positions in segment and reference
     seg_pos = 0
     ref_pos = segment.reference_start + BASE  # from 0-based to 1-based
-
-    # list of junctions supported by the segment
-    seg_junctions = []
 
     # extracting junctions from cigar string:
     for cigar_tuple in segment.cigartuples:
@@ -75,25 +72,23 @@ def segment_to_junctions(segment: pysam.AlignedSegment):
             ref_pos += cigar_tuple[1]
 
         elif cigar_tuple[0] == 3:  # skipped region from the reference (N)
-            # a junction is saved as a named tuple with fields junction_id, offset and read type
+            # a junction is saved as a named tuple with fields junction_ida and offset
             junction_id = "_".join((
                 ref_name,
                 str(ref_pos - 1),  # last position of the left exon (offset)
                 str(ref_pos + cigar_tuple[1])  # first position of the right exon
             ))
-            # TODO: update dictionary with junctions right here without saving to list etc.
-            junction_with_read_type = JunctionWithReadType(junction_id=junction_id,
-                                                           offset=seg_pos,
-                                                           read_type=seg_type)
-            seg_junctions.append(junction_with_read_type)
+            seg_junction = Junction(junction_id=junction_id, offset=seg_pos)
+            # updating dictionary of junctions
+            junctions_with_counts[seg_junction][seg_type] += 1
             ref_pos += cigar_tuple[1]
 
-    return seg_junctions
+    return None
 
 
 def alignment_to_junctions(alignment: pysam.AlignmentFile, unique: bool, primary: bool):
-    """Takes an alignment as input and returns a dictionary of all found junctions"""
-    all_junctions = defaultdict(lambda: [0] * 4)
+    """Takes an alignment as input and returns a dictionary of all junctions with counts"""
+    junctions_with_counts = defaultdict(lambda: [0] * 4)
     segment: pysam.AlignedSegment  # just annotation line
 
     # iterating through the alignment file
@@ -115,23 +110,13 @@ def alignment_to_junctions(alignment: pysam.AlignmentFile, unique: bool, primary
         if primary and segment.is_supplementary:
             continue
 
-        # junctions found in the segment (read)
-        seg_junctions = segment_to_junctions(segment)
+        # adding new junctions if present and updating counts
+        segment_to_junctions(segment=segment, junctions_with_counts=junctions_with_counts)
 
-        # adding these junctions to the dictionary
-        for junction_with_read_type in seg_junctions:
-            # junction without read type is used as key in dictionary
-            junction = Junction(
-                junction_id=junction_with_read_type.junction_id,
-                offset=junction_with_read_type.offset
-            )
-            read_type = junction_with_read_type.read_type
-            all_junctions[junction][read_type] += 1
-
-    return all_junctions
+    return junctions_with_counts
 
 
-def junctions_to_dataframe(junctions: defaultdict):
+def junctions_to_dataframe(junctions_with_counts: defaultdict):
     """Takes a dictionary of junctions with their counts
      and creates a pandas DataFrame, then sorts it by junction_id and offset"""
 
@@ -140,7 +125,7 @@ def junctions_to_dataframe(junctions: defaultdict):
     junction: Junction  # just annotation line
 
     # filling this list of rows
-    for junction, counts in junctions.items():
+    for junction, counts in junctions_with_counts.items():
 
         junction_with_counts = JunctionWithCounts(
             junction_id=junction.junction_id,
