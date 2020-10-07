@@ -2,11 +2,13 @@
 input_dir: input
 output_dir: output
 
-# Options for read filtering
+# Options for read counting and filtering
 # If a read is multimapped, only the primary alignment will be considered
 primary: True
 # If a read is multimapped, all its alignments will be ignored
 unique: False
+# Number of threads used to read individual alignment files (BAM)
+threads: 1
 
 # Read pair orientation corresponding to forward strand in strand-specific protocols
 forward_strand: F2R1
