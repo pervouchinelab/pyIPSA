@@ -7,14 +7,14 @@ Record = namedtuple("Row", ("sample", "genome", "read_length", "paired", "strand
 
 out = Path(sys.argv[1])
 records = []
-for filename in out.rglob("*.txt"):
+for filename in out.rglob("*.log"):
     sample = str(filename.parent).split("/")[-1]
     with filename.open("r") as f:
         for line in f:
             if " is " not in line:
                 continue
             left, right = line.strip().split(" is ")
-            if "Genome" in left:
+            if "genome" in left:
                 genome = right
             if "Read" in left:
                 read_length = int(right)

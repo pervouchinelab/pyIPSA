@@ -1,0 +1,175 @@
+import pysam
+import pandas as pd
+
+configfile: "config/config.yaml"
+
+INPUT_DIR = config["input_dir"]
+OUTPUT_DIR = config["output_dir"]
+THREADS = config["threads"]
+samples, = glob_wildcards(INPUT_DIR + "/{sample}.bam")
+
+
+rule all:
+    input:
+        expand("{out}/J4/{sample}.J4.gz", sample=samples, out=OUTPUT_DIR),
+        expand("{out}/S4/{sample}.S4.gz", sample=samples, out=OUTPUT_DIR),
+        OUTPUT_DIR+"/comparison.tsv"
+
+rule index_bam:
+    input:
+        bam=INPUT_DIR+"/{sample}.bam"
+    output:
+        bam_index=INPUT_DIR+"/{sample}.bam.bai"
+    run:
+        pysam.index(input.bam)
+
+checkpoint count_junctions:
+    input:
+        bam=INPUT_DIR+"/{sample}.bam",
+        bam_index=rules.index_bam.output.bam_index,
+        splice_sites="known_SJ"
+    output:
+        junctions=OUTPUT_DIR+"/J1/{sample}.J1.gz",
+        log=OUTPUT_DIR+"/J1/{sample}.log"
+    params:
+        threads=THREADS,
+        primary=("", "-p")[config["primary"]],
+        unique=("", "-u")[config["unique"]]
+    shell:
+        "python3 -m workflow.scripts.count_junctions "
+        "-i {input.bam} "
+        "-s {input.splice_sites} "
+        "-o {output.junctions} "
+        "-l {output.log} "
+        "{params.primary} {params.unique} "
+        "-t {params.threads}"
+
+rule count_sites:
+    input:
+        bam=INPUT_DIR+"/{sample}.bam",
+        bam_index=rules.index_bam.output.bam_index,
+        junctions=OUTPUT_DIR+"/J1/{sample}.J1.gz"
+    output:
+        sites=OUTPUT_DIR+"/S1/{sample}.S1.gz"
+    params:
+        threads=THREADS,
+        primary=("", "-p")[config["primary"]],
+        unique=("", "-u")[config["unique"]]
+    shell:
+        "python3 -m workflow.scripts.count_sites "
+        "-i {input.bam} "
+        "-j {input.junctions} "
+        "-o {output.sites} "
+        "{params.primary} {params.unique} "
+        "-t {params.threads}"
+
+rule compare:
+    input:
+        logs=expand("{out}/J1/{sample}.log", sample=samples, out=OUTPUT_DIR)
+    output:
+        tsv=OUTPUT_DIR+"/comparison.tsv"
+    run:
+        records = []
+        for filename in input.logs:
+            sample = filename.split("/")[-1][:-4]
+            with open(filename, "r") as f:
+                for line in f:
+                    if " is " not in line:
+                        continue
+                    left, right = line.strip().split(" is ")
+                    if "genome" in left:
+                        genome = right
+                    if "Read" in left:
+                        read_length = int(right)
+                    if right.endswith("-end"):
+                        paired = True if right[:-4] == "pair" else False
+                    if right.endswith("stranded"):
+                        stranded = True if len(right) == 8 else False
+            records.append((sample, genome, read_length, paired, stranded))
+
+        df = pd.DataFrame(records, columns=["sample", "genome", "read_length", "paired", "stranded"])
+        df.sort_values(by="sample").to_csv(output.tsv, sep="\t", index=False)
+
+rule aggregate_junctions:
+    input:
+        junctions=OUTPUT_DIR+"/J1/{sample}.J1.gz",
+        log=OUTPUT_DIR+"/J1/{sample}.log"
+    output:
+        aggregated_junctions=OUTPUT_DIR+"/J2/{sample}.J2.gz"
+    params:
+        min_offset=config["min_offset"]
+    shell:
+        "python3 -m workflow.scripts.aggregate "
+        "-i {input.junctions} "
+        "-l {input.log} "
+        "-o {output.aggregated_junctions} "
+        "-m {params.min_offset}"
+
+rule aggregate_sites:
+    input:
+        sites=rules.count_sites.output.sites,
+        log=OUTPUT_DIR+"/J1/{sample}.log"
+    output:
+        aggregated_sites=OUTPUT_DIR+"/S2/{sample}.S2.gz"
+    params:
+        min_offset=config["min_offset"]
+    shell:
+        "python3 -m workflow.scripts.aggregate "
+        "-i {input.sites} "
+        "-l {input.log} "
+        "-o {output.aggregated_sites} "
+        "-m {params.min_offset}"
+
+rule download_genome:
+    output:
+        genome="genomes/{org}.fa"
+    params:
+        url=lambda wildcards: config["genome_urls"][wildcards.org]
+    shell:
+        """
+        wget -O {output.genome}.gz {params.url}
+        gunzip {output.genome}.gz
+        """
+
+def get_org(s):
+    with open(checkpoints.count_junctions.get(sample=s).output.log) as file:
+        return file.readline().strip().split(" is ")[1]
+
+rule annotate_junctions:
+    input:
+        comparison=rules.compare.output.tsv,
+        aggregated_junctions=rules.aggregate_junctions.output.aggregated_junctions,
+        genome=lambda wildcards: f"genomes/{get_org(wildcards.sample)}.fa",
+        known_sj=lambda wildcards: f"known_SJ/{get_org(wildcards.sample)}.ss.tsv.gz"
+    output:
+        annotated_junctions=OUTPUT_DIR+"/J3/{sample}.J3.gz"
+    shell:
+         "python3 -m workflow.scripts.annotate "
+         "-j {input.aggregated_junctions} "
+         "-k {input.known_sj} "
+         "-f {input.genome} "
+         "-o {output.annotated_junctions}"
+
+rule choose_strand:
+    input:
+        annotated_junctions=rules.annotate_junctions.output.annotated_junctions,
+        ranked_list=lambda wildcards: f"known_SJ/{get_org(wildcards.sample)}.ranked.txt"
+    output:
+        stranded_junctions=OUTPUT_DIR+"/J4/{sample}.J4.gz"
+    shell:
+        "python3 -m workflow.scripts.choose_strand "
+        "-j {input.annotated_junctions} "
+        "-r {input.ranked_list} "
+        "-o {output.stranded_junctions}"
+
+rule constrain_sites:
+    input:
+        stranded_junctions=rules.choose_strand.output.stranded_junctions,
+        aggregated_sites=rules.aggregate_sites.output.aggregated_sites,
+    output:
+        constrained_sites=OUTPUT_DIR+"/S4/{sample}.S4.gz"
+    shell:
+         "python3 -m workflow.scripts.constrain_sites "
+         "-j {input.stranded_junctions} "
+         "-s {input.aggregated_sites} "
+         "-o {output.constrained_sites}"

@@ -13,7 +13,7 @@ def load_splice_sites(dir_path: str) -> Dict[str, Set[Tuple[int, int]]]:
         pairs = set()
         with gzip.open(dir_path + f"/{genome}.ss.tsv.gz", "rt") as f:
             for line in f:
-                _, left, right, _ = line.split("\t")
+                _, left, right, _ = line.strip().split("\t")
                 left, right = int(left), int(right)
                 pairs.add((left, right))
         splice_sites_by_genome[genome] = pairs

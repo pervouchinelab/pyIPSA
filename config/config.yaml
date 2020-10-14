@@ -4,7 +4,7 @@ output_dir: output
 
 # Options for read counting and filtering
 # If a read is multimapped, only the primary alignment will be considered
-primary: True
+primary: False
 # If a read is multimapped, all its alignments will be ignored
 unique: False
 # Number of threads used to read individual alignment files (BAM)

@@ -1,80 +1,77 @@
 """
-This module contains functions for counting continuous reads
-in the alignment file (BAM) supporting splice sites
+This module contains functions for extraction of
+splice sites from the alignment file (BAM)
 """
-import pysam
 import gzip
-import pandas as pd
 import argparse
 from collections import defaultdict, namedtuple
+from typing import Tuple, List, Dict, DefaultDict
 
-BASE = 1
+import pysam
+import pandas as pd
+
+from .ipsa_config import *
 
 Site = namedtuple("Site", ["site_id", "offset"])
-SiteWithCounts = namedtuple("SiteWithCounts", ["site_id", "offset", "F1", "R1", "F2", "R2"])
+SiteWithCounts = namedtuple("Site", ["site_id", "offset", "F1", "R1", "F2", "R2"])
 
 
 def parse_cli_args():
     """Parses command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Extracts splice junctions from the alignment file \
-        and counts all the reads supporting these splicing junctions"
-    )
-    parser.add_argument(
-        "-j", "--junctions", type=str, metavar="FILE", required=True,
-        help="Input junctions file (TSV)"
+        description="Extracts splice sites from BAM"
     )
     parser.add_argument(
         "-i", "--input_bam", type=str, metavar="FILE", required=True,
-        help="Input alignment file (BAM)", dest="bam"
+        help="input alignment file (BAM)", dest="bam"
+    )
+    parser.add_argument(
+        "-j", "--junctions", type=str, metavar="FILE", required=True,
+        help="input file with junctions (.gz)"
     )
     parser.add_argument(
         "-o", "--output", type=str, metavar="FILE", required=True,
-        help="Output gzipped file with sites and their counts (TSV)", dest="tsv"
+        help="output file name", dest="tsv"
     )
     parser.add_argument(
-        "-u", "--unique", action="store_true", help="Consider only uniquely mapping reads"
+        "-u", "--unique", action="store_true",
+        help="only use uniquely mapped reads"
     )
     parser.add_argument(
         "-p", "--primary", action="store_true",
-        help="Consider only primary alignments of multimapped reads"
+        help="only use primary alignments of multimapped reads"
     )
     parser.add_argument(
         "-t", "--threads", type=int, metavar="INT", default=1,
-        help="Number of threads used to read alignment file"
+        help="number of threads to use"
     )
     args = parser.parse_args()
     return vars(args)
 
 
-def junctions_to_splice_sites(filename: str):
+def junctions_to_splice_sites(filename: str) -> DefaultDict[str, set]:
     """Takes a file with splice junctions as input and returns
     a dictionary of all splice sites
-    Example key: (chr1, 100, 150)
     """
-    sites = {}
+    sites = defaultdict(set)
 
-    # reading junctions file
+    # read junctions file
     with gzip.open(filename, 'rt') as junctions_file:
         for line in junctions_file:
-            # TODO: fix case with chr10_KAAFSA_110_150
             junction_id = line.strip().split('\t')[0]
-            # splitting junction id
             ref_name, left, right = junction_id.split('_')
-            # creating new keys for sites in dictionary
-            sites[(ref_name, int(left))] = True
-            sites[(ref_name, int(right))] = True
+            # new keys for sites in dictionary
+            sites[ref_name].update({int(left), int(right)})
 
     return sites
 
 
-def segment_to_sites(segment: pysam.AlignedSegment, sites: dict,
+def segment_to_sites(segment: pysam.AlignedSegment,
+                     ref_name: str,
+                     sites: DefaultDict[str, set],
                      sites_with_counts: defaultdict):
     """Takes a read (AlignedSegment) and dictionary of splice sites
     and updates dictionary of splice sites with counts"""
-
-    # name of reference sequence where read is aligned
-    ref_name = segment.reference_name
 
     # segment (read) type (0 - read1+, 1 - read1-, 2 - read2+, 3 - read2-)
     seg_type = 2 * segment.is_read2 + segment.is_reverse
@@ -88,16 +85,24 @@ def segment_to_sites(segment: pysam.AlignedSegment, sites: dict,
 
         if cigar_tuple[0] in (0, 7, 8):  # alignment match (M), sequence match (=), sequence mismatch (X)
 
-            # iterating through positions where read is matched
-            for inc in range(1, cigar_tuple[1] - 1):
-                pos = ref_pos + inc
+            # # iterating through positions where read is matched
+            # for inc in range(1, cigar_tuple[1] - 1):
+            #     pos = ref_pos + inc
+            #
+            #     # check if such position among splice sites
+            #     if pos in sites[ref_name]:
+            #         # add new count to splice site
+            #         offset = seg_pos + inc
+            #         site = Site(site_id="_".join((ref_name, str(pos))), offset=offset)
+            #         sites_with_counts[site][seg_type] += 1
 
-                # check if such position among splice sites
-                if (ref_name, pos) in sites:
-                    # add new count to splice site
-                    offset = seg_pos + inc
-                    site = Site(site_id="_".join((ref_name, str(pos))), offset=offset)
-                    sites_with_counts[site][seg_type] += 1
+            positions = {ref_pos + inc for inc in range(1, cigar_tuple[1] - 1)}
+            intersection = positions & sites[ref_name]
+            for pos in intersection:
+                inc = pos - ref_pos
+                offset = seg_pos + inc
+                site = Site(site_id="_".join((ref_name, str(pos))), offset=offset)
+                sites_with_counts[site][seg_type] += 1
 
             seg_pos += cigar_tuple[1]
             ref_pos += cigar_tuple[1]
@@ -111,9 +116,26 @@ def segment_to_sites(segment: pysam.AlignedSegment, sites: dict,
     return None
 
 
-def alignment_to_sites(alignment: pysam.AlignmentFile, unique: bool, primary: bool, sites: dict):
+def prepare_ref_names(alignment: pysam.AlignmentFile) -> Dict[str, str]:
+    # TODO: document the function
+    trans = dict()
+    for ref_name in alignment.references:
+        if ref_name not in ALLOWED_REFERENCE_NAMES:
+            lowered = ref_name.lower()
+            if lowered in TRANSLATION:
+                trans[ref_name] = TRANSLATION[lowered]
+        else:
+            trans[ref_name] = ref_name
+    return trans
+
+
+def alignment_to_sites(alignment: pysam.AlignmentFile, sites: defaultdict, unique: bool, primary: bool, ):
     """Takes an alignment and dictionary of splice sites as input
      and returns dictionary of splice sites with their counts"""
+
+    # TODO: update reference names if needed
+    trans = prepare_ref_names(alignment)
+
     sites_with_counts = defaultdict(lambda: [0] * 4)
     segment: pysam.AlignedSegment  # just annotation line
 
@@ -136,9 +158,14 @@ def alignment_to_sites(alignment: pysam.AlignmentFile, unique: bool, primary: bo
         if primary and segment.is_supplementary:
             continue
 
+        # TODO: update reference name
+        ref_name = trans.get(segment.reference_name)
+        if ref_name is None:
+            continue
+
         # adding new counts to splice site
-        segment_to_sites(segment=segment, sites=sites,
-                         sites_with_counts=sites_with_counts)
+        segment_to_sites(segment=segment, ref_name=ref_name,
+                         sites=sites, sites_with_counts=sites_with_counts)
 
     return sites_with_counts
 
@@ -169,13 +196,15 @@ def sites_to_dataframe(sites_with_counts: defaultdict):
 
 
 def main():
+    # TODO: document
     args = parse_cli_args()
     bam = pysam.AlignmentFile(args["bam"], threads=args["threads"])
     sites = junctions_to_splice_sites(args["junctions"])
     sites_with_counts = alignment_to_sites(bam, primary=args["primary"],
                                            unique=args["unique"], sites=sites)
-    df = sites_to_dataframe(sites_with_counts)
-    df.to_csv(args["tsv"], sep="\t", index=False, header=None, compression="gzip")
+    df_sites = sites_to_dataframe(sites_with_counts)
+    df_sites.to_csv(args["tsv"], sep="\t", index=False,
+                    header=None, compression="gzip")
 
 
 if __name__ == '__main__':

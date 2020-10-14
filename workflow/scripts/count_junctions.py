@@ -1,7 +1,7 @@
 """
-This module contains functions for extracting
+This module contains functions for extraction of
 splice junctions from the alignment file (BAM) and
-counting reads supporting them.
+functions that count reads which support these splice junctions.
 """
 import pysam
 import pandas as pd
@@ -11,7 +11,7 @@ from typing import Tuple, List, Dict, DefaultDict
 from .ipsa_config import *
 from .ipsa_utils import load_splice_sites
 
-H = 60
+H = 60  # Log file horizontal rule length
 RawJunction = namedtuple("RawJunction", ["ref_name", "start", "stop", "offset"])
 Junction = namedtuple("Junction", ["junction_id", "offset", "F1", "R1", "F2", "R2"])
 
@@ -19,37 +19,35 @@ Junction = namedtuple("Junction", ["junction_id", "offset", "F1", "R1", "F2", "R
 def parse_cli_args():
     """Parses command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Extracts splice junctions from the alignment file \
-            and counts all the reads supporting these splicing junctions. \
-            Guesses organism (genome and its version) and sequencing library parameters: \
-            read length, if the data is stranded or not, etc."
+        description="Extract splice junctions from BAM"
     )
     parser.add_argument(
         "-i", "--input_bam", type=str, metavar="FILE", required=True,
-        help="Input alignment file (BAM)", dest="bam"
+        help="input alignment file (BAM)", dest="bam"
     )
     parser.add_argument(
-        "-s", "--splicesites", type=str, metavar="DIR", required=True,
-        help="Directory with annotated splice sites"
+        "-s", "--splice_sites", type=str, metavar="DIR", required=True,
+        help="directory with annotated splice sites"
     )
     parser.add_argument(
         "-o", "--output", type=str, metavar="FILE", required=True,
-        help="Output gzipped file with junctions and their counts (TSV)", dest="tsv"
+        help="output file name", dest="tsv"
     )
     parser.add_argument(
-        "-a", "--analysis", type=str, metavar="FILE", required=True,
-        help="Output file file with analysis (TXT)", dest="txt"
+        "-l", "--log", type=str, metavar="FILE", required=True,
+        help="output log name"
     )
     parser.add_argument(
-        "-u", "--unique", action="store_true", help="Consider only uniquely mapping reads"
+        "-u", "--unique", action="store_true",
+        help="only use uniquely mapped reads"
     )
     parser.add_argument(
         "-p", "--primary", action="store_true",
-        help="Consider only primary alignments of multimapped reads"
+        help="only use primary alignments of multimapped reads"
     )
     parser.add_argument(
         "-t", "--threads", type=int, metavar="INT", default=1,
-        help="Number of threads used to read alignment file"
+        help="number of threads to use"
     )
     args = parser.parse_args()
     return vars(args)
@@ -57,7 +55,7 @@ def parse_cli_args():
 
 def segment_to_junctions(segment: pysam.AlignedSegment, junctions_with_counts: defaultdict):
     """Takes a read (AlignedSegment) and dictionary of junctions with counts
-     as input. Then updates the dictionary with new data from extracted from the read"""
+     as input. Then updates the dictionary with new data extracted from the read"""
 
     # name of reference sequence where read is aligned
     ref_name = segment.reference_name
@@ -195,7 +193,7 @@ def get_stats(df: pd.DataFrame) -> List[str]:
 
     # Are reads paired?
     paired = all(col_sums > 0)
-    a += [f"Guessing the data is {('single', 'pair')[paired]}-end\n", "-" * H + "\n"]
+    a += [f"Guess: the data is {('single', 'pair')[paired]}-end\n", "-" * H + "\n"]
 
     # Correlation analysis
     dfi['F1+R2'] = dfi['F1'] + dfi['R2']
@@ -211,7 +209,7 @@ def get_stats(df: pd.DataFrame) -> List[str]:
             stranded = bool(corr_mat.loc['F1', 'R1'] <= 0.5)
         else:
             stranded = bool(corr_mat.loc['F2', 'R2'] <= 0.5)
-    a += [f"Guessing the data is {('un', '')[stranded]}stranded\n", "-" * H + "\n"]
+    a += [f"Guess: the data is {('un', '')[stranded]}stranded\n", "-" * H + "\n"]
 
     # Distribution of offsets
     offsets = dfi.groupby(by="offset").sum()
@@ -222,7 +220,7 @@ def get_stats(df: pd.DataFrame) -> List[str]:
 
 def write_analysis(filename: str, read_length: int,
                    hits_by_genome: Dict[str, int], stats: List[str]):
-    tmp = [f"Genome guess is {max(hits_by_genome, key=hits_by_genome.get)}\n"]
+    tmp = [f"Guess: genome is {max(hits_by_genome, key=hits_by_genome.get)}\n"]
     tmp += [f"Number of hits with {genome} genome: {hits}\n" for genome, hits in hits_by_genome.items()]
     tmp += ["-" * H + "\n", f"Read length is {read_length}\n", "-" * H + "\n"]
     with open(filename, "w") as txt:
@@ -231,19 +229,19 @@ def write_analysis(filename: str, read_length: int,
 
 def main():
     args = parse_cli_args()
-    # reading BAM and getting junctions
+    # read BAM and get junctions
     bam = pysam.AlignmentFile(args["bam"], threads=args["threads"])
     junctions, read_length = alignment_to_junctions(alignment=bam,
                                                     primary=args["primary"],
                                                     unique=args["unique"])
     df_junctions = junctions_to_dataframe(junctions_with_counts=junctions)
-    # guessing the genome
+    # guess the genome
     hits_by_genome = guess_genome(df=df_junctions,
-                                  dir_with_splice_sites=args["splicesites"])
-    # getting alignment stats
+                                  dir_with_splice_sites=args["splice_sites"])
+    # get alignment stats
     stats = get_stats(df=df_junctions)
-    # writing outputs
-    write_analysis(filename=args["txt"], read_length=read_length,
+    # write outputs
+    write_analysis(filename=args["log"], read_length=read_length,
                    hits_by_genome=hits_by_genome, stats=stats)
     df_junctions.to_csv(args["tsv"], sep="\t", index=False,
                         header=None, compression="gzip")
