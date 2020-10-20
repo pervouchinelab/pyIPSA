@@ -22,7 +22,7 @@ def parse_cli_args():
         description="Extracts splice sites from BAM"
     )
     parser.add_argument(
-        "-i", "--input_bam", type=str, metavar="FILE", required=True,
+        "-i", "--input", type=str, metavar="FILE", required=True,
         help="input alignment file (BAM)", dest="bam"
     )
     parser.add_argument(

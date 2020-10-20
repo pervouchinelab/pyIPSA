@@ -137,7 +137,6 @@ def get_org(s):
 
 rule annotate_junctions:
     input:
-        comparison=rules.compare.output.tsv,
         aggregated_junctions=rules.aggregate_junctions.output.aggregated_junctions,
         genome=lambda wildcards: f"genomes/{get_org(wildcards.sample)}.fa",
         known_sj=lambda wildcards: f"known_SJ/{get_org(wildcards.sample)}.ss.tsv.gz"

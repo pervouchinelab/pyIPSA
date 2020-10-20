@@ -18,8 +18,8 @@ def parse_cli_args():
         """
     )
     parser.add_argument(
-        "-i", "--input_gtf", type=str, metavar="FILE", required=True,
-        help="Input annotation file (GTF/GFF)", dest="gtf"
+        "-i", "--input", type=str, metavar="FILE", required=True,
+        help="input annotation file (GTF/GFF)", dest="gtf"
     )
     parser.add_argument(
         "-m", "--min_intron_length", type=int, metavar="INT", default=40,
