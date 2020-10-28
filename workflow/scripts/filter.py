@@ -24,6 +24,10 @@ def parse_cli_args():
         "-g", "--gtag", action="store_true",
         help="use only GTAG splice sites"
     )
+    parser.add_argument(
+        "-o", "--output", type=str, metavar="FILE", required=True,
+        help="output file name (step 6)"
+    )
     args = parser.parse_args()
     return vars(args)
 
@@ -34,13 +38,20 @@ def read_and_filter(filename: str, entropy: float,
     df = pd.read_table(filename, header=None)
     df.columns = ["sj_id", "total_count", "staggered_count", "entropy",
                   "status", "nucleotides"]
-    # TODO: add filtration
+    # filters
+    c = df["total_count"] >= count
+    e = df["entropy"] >= entropy
+    df = df[c & e]
+    if gtag:
+        df = df[df["nucleotides"] == "GTAG"]
     return df
 
 
 def main():
     args = parse_cli_args()
-    print(args)
+    df = read_and_filter(filename=args["input"], entropy=args["entropy"],
+                         count=args["count"], gtag=args["gtag"])
+    df.to_csv(args["output"], sep="\t", index=False, header=None, compression="gzip")
 
 
 if __name__ == '__main__':

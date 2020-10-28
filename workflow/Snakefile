@@ -11,9 +11,10 @@ samples, = glob_wildcards(INPUT_DIR + "/{sample}.bam")
 
 rule all:
     input:
-        expand("{out}/J4/{sample}.J4.gz", sample=samples, out=OUTPUT_DIR),
-        expand("{out}/S4/{sample}.S4.gz", sample=samples, out=OUTPUT_DIR),
-        OUTPUT_DIR+"/comparison.tsv"
+        OUTPUT_DIR+"/comparison.tsv",
+        expand("{out}/J7/{sample}.J7.gz", sample=samples, out=OUTPUT_DIR),
+        expand("{out}/S6/{sample}.S6.gz", sample=samples, out=OUTPUT_DIR)
+
 
 rule index_bam:
     input:
@@ -164,7 +165,7 @@ rule choose_strand:
 rule constrain_sites:
     input:
         stranded_junctions=rules.choose_strand.output.stranded_junctions,
-        aggregated_sites=rules.aggregate_sites.output.aggregated_sites,
+        aggregated_sites=rules.aggregate_sites.output.aggregated_sites
     output:
         constrained_sites=OUTPUT_DIR+"/S4/{sample}.S4.gz"
     shell:
@@ -172,3 +173,45 @@ rule constrain_sites:
          "-j {input.stranded_junctions} "
          "-s {input.aggregated_sites} "
          "-o {output.constrained_sites}"
+
+rule filter_junctions:
+    input:
+        stranded_junctions=rules.choose_strand.output.stranded_junctions
+    output:
+        filtered_junctions=OUTPUT_DIR+"/J6/{sample}.J6.gz"
+    params:
+        entropy=config["entropy"],
+        total_count=config["total_count"],
+        gtag=("", "-g")[config["gtag"]]
+    shell:
+         "python3 -m workflow.scripts.filter "
+         "-i {input.stranded_junctions} "
+         "-e {params.entropy} "
+         "-c {params.total_count} "
+         "{params.gtag} "
+         "-o {output.filtered_junctions}"
+
+
+rule constrain_sites_again:
+    input:
+        filtered_junctions=rules.filter_junctions.output.filtered_junctions,
+        aggregated_sites=rules.aggregate_sites.output.aggregated_sites
+    output:
+        constrained_sites=OUTPUT_DIR+"/S6/{sample}.S6.gz"
+    shell:
+         "python3 -m workflow.scripts.constrain_sites "
+         "-j {input.filtered_junctions} "
+         "-s {input.aggregated_sites} "
+         "-o {output.constrained_sites}"
+
+rule compute_rates:
+    input:
+        filtered_junctions=rules.filter_junctions.output.filtered_junctions,
+        constrained_sites=rules.constrain_sites_again.output.constrained_sites
+    output:
+        rates=OUTPUT_DIR+"/J7/{sample}.J7.gz"
+    shell:
+         "python3 -m workflow.scripts.compute_rates "
+         "-j {input.filtered_junctions} "
+         "-s {input.constrained_sites} "
+         "-o {output.rates}"
