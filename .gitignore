@@ -12,3 +12,6 @@ prototypes/
 .git/
 .snakemake/
 docs/make.bat
+docs/_build/*
+docs/_statis/*
+docs/_templates/*
