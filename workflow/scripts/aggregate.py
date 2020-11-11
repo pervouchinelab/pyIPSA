@@ -1,13 +1,18 @@
-import pandas as pd
-import numpy as np
+"""
+This module contains functions for aggregation of read counts
+of splice junctions/sites.
+"""
 import argparse
 from collections import namedtuple
+
+import numpy as np
+import pandas as pd
 
 NewRow = namedtuple("Pandas", ["sj_id", "offset", "count"])
 
 
-def parse_cli_args():
-    """Parses command line arguments"""
+def parse_cli_args() -> dict:
+    """Parses command line arguments."""
     parser = argparse.ArgumentParser(
         description="Aggregates counts by the offset with three different functions"
     )

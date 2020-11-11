@@ -11,3 +11,4 @@ prototypes/
 .idea/
 .git/
 .snakemake/
+docs/make.bat

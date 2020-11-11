@@ -1,6 +1,8 @@
 # pyIPSA
 Integrative Pipeline for Splicing Analysis
 
+[![Documentation Status](https://readthedocs.org/projects/pyipsa/badge/?version=latest)](https://pyipsa.readthedocs.io/en/latest/?badge=latest)
+
 ### Installation & Run
 
 To use this program you must have python environment
