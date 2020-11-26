@@ -1,3 +1,4 @@
+# TODO
 import argparse
 
 import pandas as pd
@@ -6,7 +7,7 @@ import pandas as pd
 def parse_cli_args():
     """Parses command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Filters splice junctions and sites by different criteria"
+        description="Filter splice junctions and sites by different criteria"
     )
     parser.add_argument(
         "-i", "--input", type=str, metavar="FILE", required=True,
@@ -51,7 +52,7 @@ def main():
     args = parse_cli_args()
     df = read_and_filter(filename=args["input"], entropy=args["entropy"],
                          count=args["count"], gtag=args["gtag"])
-    df.to_csv(args["output"], sep="\t", index=False, header=None, compression="gzip")
+    df.to_csv(args["output"], sep="\t", index=False, header=False, compression="gzip")
 
 
 if __name__ == '__main__':

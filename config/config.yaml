@@ -16,7 +16,7 @@ unique: False
 threads: 1
 
 # Read pair orientation that corresponds to forward strand in strand-specific protocols
-forward_strand: F2R1
+strand_mode: F2R1
 # F2 means that read2 is on the forward strand, R1 - read1 on the reverse strand
 # Possible values: F2R1, F1R2
 # In Illumina strand-specific protocol it is usually F2R1
