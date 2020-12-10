@@ -29,17 +29,6 @@ checkpoint count_junctions:
         "-t {params.threads}"
 
 
-rule describe_replicates:
-    input:
-        stats=expand("{out}/J1/{sample}.stats", sample=samples, out=OUTPUT_DIR)
-    output:
-        tsv=OUTPUT_DIR+"/overview.tsv"
-    shell:
-        "python3 -m workflow.scripts.describe_replicates "
-        "{input.stats} "
-        "-o {output.tsv}"
-
-
 rule aggregate_junctions:
     input:
         junctions=OUTPUT_DIR+"/J1/{sample}.J1.gz",
