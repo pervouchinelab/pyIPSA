@@ -49,16 +49,3 @@ rule compute_pooled_rates:
          "-j {input.filtered_junctions} "
          "-s {input.filtered_pooled_sites} "
          "-o {output.rates}"
-
-
-# rule constrain_sites:
-#     input:
-#         stranded_junctions=rules.choose_strand.output.stranded_junctions,
-#         aggregated_sites=rules.aggregate_sites.output.aggregated_sites
-#     output:
-#         constrained_sites=OUTPUT_DIR+"/S4/{sample}.S4.gz"
-#     shell:
-#          "python3 -m workflow.scripts.constrain_sites "
-#          "-j {input.stranded_junctions} "
-#          "-s {input.aggregated_sites} "
-#          "-o {output.constrained_sites}"
