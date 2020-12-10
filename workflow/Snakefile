@@ -24,11 +24,17 @@ include: "rules/genome.smk"
 include: "rules/pooled_sites.smk"
 
 
+rule add_replicates:
+    input:
+        stats=OUTPUT_DIR+"/J1/{sample}.stats"
+    output:
+        stats=OUTPUT_DIR+"/stats/{sample}.stats"
+    shell: "cp {input.stats} {output.stats}"
+
 
 rule describe_replicates:
     input:
-        filtered_junctions=expand("{out}/J6/{sample}.J6.gz", out=OUTPUT_DIR, sample=samples),
-        stats=expand("{out}/J1/{sample}.stats", out=OUTPUT_DIR, sample=samples)
+        stats=expand("{out}/stats/{sample}.stats", out=OUTPUT_DIR, sample=samples)
     output:
         tsv=OUTPUT_DIR+"/overview.tsv"
     shell:
