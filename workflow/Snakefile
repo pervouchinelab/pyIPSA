@@ -23,17 +23,17 @@ include: "rules/sites.smk"
 include: "rules/genome.smk"
 include: "rules/pooled_sites.smk"
 
-def get_stats(wildcards):
-    return [checkpoints.count_junctions.get(sample=s).output.stats for s in samples]
 
 
 rule describe_replicates:
-    input: get_stats
+    input:
+        filtered_junctions=expand("{out}/J6/{sample}.J6.gz", out=OUTPUT_DIR, sample=samples),
+        stats=expand("{out}/J1/{sample}.stats", out=OUTPUT_DIR, sample=samples)
     output:
         tsv=OUTPUT_DIR+"/overview.tsv"
     shell:
         "python3 -m workflow.scripts.describe_replicates "
-        "{input} "
+        "{input.stats} "
         "-o {output.tsv}"
 
 
