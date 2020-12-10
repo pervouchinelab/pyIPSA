@@ -1,9 +1,11 @@
 */.ipynb_checkpoints/*
 .ipynb_checkpoints
-__pycache__/
+**/__pycache__/
 bams/
 genomes/
 input/
+_input/
+_output/
 output/
 introns/
 annotations/
@@ -15,3 +17,6 @@ docs/make.bat
 docs/_build/*
 docs/_statis/*
 docs/_templates/*
+
+**.pl
+**.pm

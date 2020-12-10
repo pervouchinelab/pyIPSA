@@ -4,6 +4,7 @@
 # Folders with input and output data
 input_dir: input
 output_dir: output
+pooled: False
 
 # STAGE 1: extract junctions/sites
 

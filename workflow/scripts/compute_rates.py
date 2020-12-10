@@ -1,13 +1,14 @@
 import argparse
 import gzip
 from collections import defaultdict, namedtuple
+from typing import Dict, DefaultDict, List, Tuple
 
 import pandas as pd
 
 Row = namedtuple("Row", ["sj_id", "inclusion", "exclusion", "retention"])
 
 
-def parse_cli_args():
+def parse_cli_args() -> Dict:
     """Parses command line arguments"""
     parser = argparse.ArgumentParser(
         description="Computes inclusion and processing rates of splice junctions"
@@ -28,7 +29,7 @@ def parse_cli_args():
     return vars(args)
 
 
-def read_junctions(filename: str):
+def read_junctions(filename: str) -> Tuple[Dict, List]:
     sites = defaultdict(lambda: {"+": set(), "-": set()})
     with gzip.open(filename, "rt") as j:
         for line in j:
@@ -50,8 +51,10 @@ def read_junctions(filename: str):
     return index, back
 
 
-def compute_rates(junctions_filename: str, sites_filename: str,
-                  index: dict, back: list):
+def compute_rates(junctions_filename: str,
+                  sites_filename: str,
+                  index: dict,
+                  back: list) -> Tuple[DefaultDict, DefaultDict, DefaultDict]:
     inclusion = defaultdict(int)
     exclusion = defaultdict(int)
     retention = defaultdict(int)
@@ -82,7 +85,10 @@ def compute_rates(junctions_filename: str, sites_filename: str,
     return inclusion, exclusion, retention
 
 
-def output(inclusion: defaultdict, exclusion: defaultdict, retention: defaultdict, back: list):
+def output(inclusion: defaultdict,
+           exclusion: defaultdict,
+           retention: defaultdict,
+           back: list) -> pd.DataFrame:
     rows_list = []
     for ref_name, strand, pos in back:
         key = (ref_name, strand, pos, "A")
@@ -116,7 +122,7 @@ def main():
     )
     output(inclusion, exclusion, retention, back).to_csv(
         args["output"], sep="\t", index=False,
-        header=None, compression="gzip"
+        header=False, compression="gzip"
     )
 
 

@@ -1,19 +1,20 @@
 """
-This module contains functions for extraction of
-splice sites from the alignment file (BAM)
+This module contains functions that:
+- extract splice sites from BAM
+-
 """
-import gzip
 import argparse
-from collections import defaultdict, namedtuple
-from typing import Tuple, List, Dict, DefaultDict
+import gzip
+import collections as cts
+from typing import Dict, DefaultDict, Set, Tuple, Counter
 
-import pysam
 import pandas as pd
+import pysam
 
 from .ipsa_config import *
 
-Site = namedtuple("Site", ["site_id", "offset"])
-SiteWithCounts = namedtuple("Site", ["site_id", "offset", "F1", "R1", "F2", "R2"])
+SiteWithOffset = cts.namedtuple("SiteWithOffset", ["site_id", "offset"])
+SiteWithCount = cts.namedtuple("Site", ["site_id", "offset", "total_count"])
 
 
 def parse_cli_args():
@@ -23,15 +24,23 @@ def parse_cli_args():
     )
     parser.add_argument(
         "-i", "--input", type=str, metavar="FILE", required=True,
-        help="input alignment file (BAM)", dest="bam"
+        help="input alignment file (BAM)"
     )
     parser.add_argument(
         "-j", "--junctions", type=str, metavar="FILE", required=True,
-        help="input file with junctions (.gz)"
+        help="input junctions file (step >= 4)"
+    )
+    parser.add_argument(
+        "-s", "--stats", type=str, metavar="FILE",
+        required=True, help="input stats file (from step 1)"
     )
     parser.add_argument(
         "-o", "--output", type=str, metavar="FILE", required=True,
-        help="output file name", dest="tsv"
+        help="output file name (step 1)"
+    )
+    parser.add_argument(
+        "-m", "--strand_mode", type=str, metavar="STR", choices=["F1R2", "F2R1"],
+        help="F1R2 assigned to forward strand in case of stranded data, F2R1 otherwise"
     )
     parser.add_argument(
         "-u", "--unique", action="store_true",
@@ -49,60 +58,130 @@ def parse_cli_args():
     return vars(args)
 
 
-def junctions_to_splice_sites(filename: str) -> DefaultDict[str, set]:
-    """Takes a file with splice junctions as input and returns
-    a dictionary of all splice sites
+def read_stats(filename: str) -> Tuple[str, int, bool, bool]:
+    """Read sample stats file and return read length,
+    genome and its version, and if reads are paired or stranded."""
+    with open(filename, "r") as f:
+        for line in f:
+            if " is " not in line:
+                continue
+            left, right = line.strip().split(" is ")
+            if "genome" in left:
+                genome = right
+            elif "Read" in left:
+                read_length = int(right)
+            elif right.endswith("-end"):
+                paired = True if right[:-4] == "pair" else False
+            elif right.endswith("stranded"):
+                stranded = True if len(right) == 8 else False
+    return genome, read_length, paired, stranded
+
+
+def junctions2sites(filename: str) -> DefaultDict[Tuple[str, int], Set]:
     """
-    sites = defaultdict(set)
+    Extract sites from junctions found in J pipeline.
+
+    :param filename: input junctions file with strand info (step >= 4)
+    :return: dictionary with splice sites (flanking nucleotides)
+    """
+    sites = cts.defaultdict(set)
 
     # read junctions file
-    with gzip.open(filename, 'rt') as junctions_file:
-        for line in junctions_file:
+    with gzip.open(filename, 'rt') as jf:
+
+        for line in jf:
+
             junction_id = line.strip().split('\t')[0]
-            ref_name, left, right = junction_id.split('_')
-            # new keys for sites in dictionary
-            sites[ref_name].update({int(left), int(right)})
+            ref_name, left, right, strand = junction_id.split('_')
+            sites[(ref_name, int(left))].add(strand)
+            sites[(ref_name, int(right))].add(strand)
 
     return sites
 
 
-def segment_to_sites(segment: pysam.AlignedSegment,
-                     ref_name: str,
-                     sites: DefaultDict[str, set],
-                     sites_with_counts: defaultdict):
-    """Takes a read (AlignedSegment) and dictionary of splice sites
-    and updates dictionary of splice sites with counts"""
+def prepare_ref_names(alignment: pysam.AlignmentFile) -> Dict[str, str]:
+    """
+    Fix reference names if needed.
+
+    :param alignment: alignment file (pysam object)
+    :return: mapping from incorrect names to correct ones
+    """
+    trans = dict()
+
+    for ref_name in alignment.references:
+
+        if ref_name not in ALLOWED_REFERENCE_NAMES:
+
+            lowered = ref_name.lower()
+
+            if lowered in TRANSLATION:
+                trans[ref_name] = TRANSLATION[lowered]
+        else:
+
+            trans[ref_name] = ref_name
+
+    return trans
+
+
+def segment2counts(
+        segment: pysam.AlignedSegment,
+        ref_name: str,
+        sites: DefaultDict[Tuple[str, int], Set],
+        counts: Counter[SiteWithOffset],
+        stranded: bool,
+        strand_mode: str
+) -> None:
+    """
+    Take a read from alignment and add counts for existing sites present in read.
+
+    :param segment: read from alignment
+    :param ref_name: corrected reference name
+    :param sites: dictionary with sites extracted from junctions
+    :param counts: dictionary with sites and counts
+    :param stranded: true if data is stranded
+    :param strand_mode: F1R2 or F2R1 - determines strand
+    :return: does not return anything
+    """
 
     # segment (read) type (0 - read1+, 1 - read1-, 2 - read2+, 3 - read2-)
     seg_type = 2 * segment.is_read2 + segment.is_reverse
+    if stranded:
+        seg_strand = "+" if seg_type in (1, 2) else '-'  # choose strand
+        if strand_mode == "F1R2":  # other forward pair
+            seg_strand = ("+", "-")[seg_strand == "+"]
+    else:
+        seg_strand = "*"
 
     # initial positions in segment and reference
     seg_pos = 0
     ref_pos = segment.reference_start + BASE
 
-    # extracting
     for cigar_tuple in segment.cigartuples:
 
         if cigar_tuple[0] in (0, 7, 8):  # alignment match (M), sequence match (=), sequence mismatch (X)
 
-            # # iterating through positions where read is matched
-            # for inc in range(1, cigar_tuple[1] - 1):
-            #     pos = ref_pos + inc
-            #
-            #     # check if such position among splice sites
-            #     if pos in sites[ref_name]:
-            #         # add new count to splice site
-            #         offset = seg_pos + inc
-            #         site = Site(site_id="_".join((ref_name, str(pos))), offset=offset)
-            #         sites_with_counts[site][seg_type] += 1
+            for pos in range(ref_pos + 1, ref_pos + cigar_tuple[1] - 1):
 
-            positions = {ref_pos + inc for inc in range(1, cigar_tuple[1] - 1)}
-            intersection = positions & sites[ref_name]
-            for pos in intersection:
-                inc = pos - ref_pos
-                offset = seg_pos + inc
-                site = Site(site_id="_".join((ref_name, str(pos))), offset=offset)
-                sites_with_counts[site][seg_type] += 1
+                if (ref_name, pos) in sites:
+                    site = None
+
+                    if stranded:
+                        if seg_strand in sites[(ref_name, pos)]:
+                            site = SiteWithOffset(
+                                site_id="_".join((ref_name, str(pos), seg_strand)),
+                                offset=seg_pos + (pos - ref_pos)
+                            )
+                        else:
+                            continue
+                    else:
+                        for strand in sites[(ref_name, pos)]:
+                            site = SiteWithOffset(
+                                site_id="_".join((ref_name, str(pos), strand)),
+                                offset=seg_pos + (pos - ref_pos)
+                            )
+
+                    if site is not None:
+                        counts[site] += 1
 
             seg_pos += cigar_tuple[1]
             ref_pos += cigar_tuple[1]
@@ -116,27 +195,21 @@ def segment_to_sites(segment: pysam.AlignedSegment,
     return None
 
 
-def prepare_ref_names(alignment: pysam.AlignmentFile) -> Dict[str, str]:
-    # TODO: document the function
-    trans = dict()
-    for ref_name in alignment.references:
-        if ref_name not in ALLOWED_REFERENCE_NAMES:
-            lowered = ref_name.lower()
-            if lowered in TRANSLATION:
-                trans[ref_name] = TRANSLATION[lowered]
-        else:
-            trans[ref_name] = ref_name
-    return trans
-
-
-def alignment_to_sites(alignment: pysam.AlignmentFile, sites: defaultdict, unique: bool, primary: bool, ):
-    """Takes an alignment and dictionary of splice sites as input
+def alignment2counts(
+        alignment: pysam.AlignmentFile,
+        sites: DefaultDict[Tuple[str, int], Set],
+        unique: bool,
+        primary: bool,
+        stranded: bool,
+        strand_mode: str
+) -> Counter[SiteWithOffset]:
+    """
+    TODO: Takes an alignment and dictionary of splice sites as input
      and returns dictionary of splice sites with their counts"""
 
-    # TODO: update reference names if needed
     trans = prepare_ref_names(alignment)
 
-    sites_with_counts = defaultdict(lambda: [0] * 4)
+    counts = cts.Counter()
     segment: pysam.AlignedSegment  # just annotation line
 
     # iterating through the alignment file
@@ -158,37 +231,42 @@ def alignment_to_sites(alignment: pysam.AlignmentFile, sites: defaultdict, uniqu
         if primary and segment.is_supplementary:
             continue
 
-        # TODO: update reference name
         ref_name = trans.get(segment.reference_name)
         if ref_name is None:
             continue
 
         # adding new counts to splice site
-        segment_to_sites(segment=segment, ref_name=ref_name,
-                         sites=sites, sites_with_counts=sites_with_counts)
+        segment2counts(
+            segment=segment,
+            ref_name=ref_name,
+            sites=sites,
+            counts=counts,
+            stranded=stranded,
+            strand_mode=strand_mode
+        )
 
-    return sites_with_counts
+    return counts
 
 
-def sites_to_dataframe(sites_with_counts: defaultdict):
+def counts2dataframe(counts: Counter[SiteWithOffset]) -> pd.DataFrame:
     """Takes a dictionary of sites with their counts
      and creates a pandas DataFrame, then sorts it by site_id and offset"""
 
     # list of rows for pandas DataFrame
-    rows_list = []
-    site: Site  # just annotation line
+    rows = []
 
     # filling this list of rows
-    for site, counts in sites_with_counts.items():
-        site_with_counts = SiteWithCounts(
-            site_id=site.site_id,
-            offset=site.offset,
-            F1=counts[0], R1=counts[1], F2=counts[2], R2=counts[3]
+    for site, count in counts.items():
+        rows.append(
+            SiteWithCount(
+                site_id=site.site_id,
+                offset=site.offset,
+                total_count=count
+            )
         )
-        rows_list.append(site_with_counts)
 
     # creating dataframe
-    df = pd.DataFrame(rows_list, columns=["site_id", "offset", "F1", "R1", "F2", "R2"])
+    df = pd.DataFrame(rows, columns=["site_id", "offset", "total_count"])
     # sorting it
     df = df.sort_values(by=["site_id", "offset"])
 
@@ -196,15 +274,17 @@ def sites_to_dataframe(sites_with_counts: defaultdict):
 
 
 def main():
-    # TODO: document
     args = parse_cli_args()
-    bam = pysam.AlignmentFile(args["bam"], threads=args["threads"])
-    sites = junctions_to_splice_sites(args["junctions"])
-    sites_with_counts = alignment_to_sites(bam, primary=args["primary"],
-                                           unique=args["unique"], sites=sites)
-    df_sites = sites_to_dataframe(sites_with_counts)
-    df_sites.to_csv(args["tsv"], sep="\t", index=False,
-                    header=None, compression="gzip")
+    bam = pysam.AlignmentFile(args["input"], threads=args["threads"])
+    sites = junctions2sites(filename=args["junctions"])
+    genome, read_length, paired, stranded = read_stats(args["stats"])
+    counts = alignment2counts(
+        alignment=bam, sites=sites,
+        unique=args["unique"], primary=args["primary"],
+        stranded=stranded, strand_mode=args["strand_mode"]
+    )
+    df = counts2dataframe(counts=counts)
+    df.to_csv(args["output"], sep="\t", index=False, header=False, compression="gzip")
 
 
 if __name__ == '__main__':

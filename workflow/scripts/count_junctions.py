@@ -3,11 +3,13 @@ This module contains functions for extraction of
 splice junctions from the alignment file (BAM) and
 functions that count reads which support these splice junctions.
 """
-import pysam
-import pandas as pd
 import argparse
 from collections import namedtuple, defaultdict, Counter
 from typing import Tuple, List, Dict, DefaultDict
+
+import pandas as pd
+import pysam
+
 from .ipsa_config import *
 from .ipsa_utils import load_splice_sites
 
@@ -22,8 +24,8 @@ def parse_cli_args():
         description="Extract splice junctions from BAM"
     )
     parser.add_argument(
-        "-i", "--input_bam", type=str, metavar="FILE", required=True,
-        help="input alignment file (BAM)", dest="bam"
+        "-i", "--input", type=str, metavar="FILE", required=True,
+        help="input alignment file (BAM)"
     )
     parser.add_argument(
         "-s", "--splice_sites", type=str, metavar="DIR", required=True,
@@ -31,11 +33,11 @@ def parse_cli_args():
     )
     parser.add_argument(
         "-o", "--output", type=str, metavar="FILE", required=True,
-        help="output file name", dest="tsv"
+        help="output file name (step 1)"
     )
     parser.add_argument(
-        "-l", "--log", type=str, metavar="FILE", required=True,
-        help="output log name"
+        "-l", "--stats", type=str, metavar="FILE", required=True,
+        help="output stats file name"
     )
     parser.add_argument(
         "-u", "--unique", action="store_true",
@@ -230,7 +232,7 @@ def write_analysis(filename: str, read_length: int,
 def main():
     args = parse_cli_args()
     # read BAM and get junctions
-    bam = pysam.AlignmentFile(args["bam"], threads=args["threads"])
+    bam = pysam.AlignmentFile(args["input"], threads=args["threads"])
     junctions, read_length = alignment_to_junctions(alignment=bam,
                                                     primary=args["primary"],
                                                     unique=args["unique"])
@@ -241,10 +243,10 @@ def main():
     # get alignment stats
     stats = get_stats(df=df_junctions)
     # write outputs
-    write_analysis(filename=args["log"], read_length=read_length,
+    write_analysis(filename=args["stats"], read_length=read_length,
                    hits_by_genome=hits_by_genome, stats=stats)
-    df_junctions.to_csv(args["tsv"], sep="\t", index=False,
-                        header=None, compression="gzip")
+    df_junctions.to_csv(args["output"], sep="\t", index=False,
+                        header=False, compression="gzip")
 
 
 if __name__ == '__main__':

@@ -1,0 +1,53 @@
+rule count_sites:
+    input:
+        bam=INPUT_DIR+"/{sample}.bam",
+        bam_index=rules.index_bam.output.bam_index,
+        junctions=OUTPUT_DIR+"/J4/{sample}.J4.gz",
+        stats=OUTPUT_DIR+"/J1/{sample}.stats"
+    output:
+        sites=OUTPUT_DIR+"/S1/{sample}.S1.gz"
+    params:
+        threads=THREADS,
+        primary=("", "-p")[config["primary"]],
+        unique=("", "-u")[config["unique"]]
+    shell:
+        "python3 -m workflow.scripts.count_sites "
+        "-i {input.bam} "
+        "-j {input.junctions} "
+        "-s {input.stats} "
+        "-o {output.sites} "
+        "{params.primary} {params.unique} "
+        "-t {params.threads}"
+
+
+rule aggregate_sites:
+    input:
+        sites=rules.count_sites.output.sites,
+        stats=OUTPUT_DIR+"/J1/{sample}.stats"
+    output:
+        aggregated_sites=OUTPUT_DIR+"/S2/{sample}.S2.gz"
+    params:
+        min_offset=config["min_offset"]
+    shell:
+        "python3 -m workflow.scripts.aggregate_sites "
+        "-i {input.sites} "
+        "-s {input.stats} "
+        "-o {output.aggregated_sites} "
+        "-m {params.min_offset}"
+
+
+rule filter_sites:
+    input:
+        aggregated_sites=rules.aggregate_sites.output.aggregated_sites
+    output:
+        filtered_sites=OUTPUT_DIR+"/S6/{sample}.S6.gz"
+    params:
+        entropy=config["entropy"],
+        total_count=config["total_count"]
+    shell:
+         "python3 -m workflow.scripts.filter "
+         "-i {input.aggregated_sites} "
+         "--sites "
+         "-e {params.entropy} "
+         "-c {params.total_count} "
+         "-o {output.filtered_sites}"
