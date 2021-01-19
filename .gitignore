@@ -1,5 +1,6 @@
 */.ipynb_checkpoints/*
 .ipynb_checkpoints
+
 **/__pycache__/
 bams/
 genomes/
@@ -10,9 +11,11 @@ output/
 introns/
 annotations/
 prototypes/
+pl
 .idea/
 .git/
 .snakemake/
+
 docs/make.bat
 docs/_build/*
 docs/_statis/*

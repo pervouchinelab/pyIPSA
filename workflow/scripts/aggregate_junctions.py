@@ -33,8 +33,8 @@ def parse_cli_args() -> Dict:
         required=True, help="output file name (step 2)"
     )
     parser.add_argument(
-        "--strand_mode", type=str, metavar="STR",  choices=["F1R2", "F2R1"],
-        help="F1R2 assigned to forward strand in case of stranded data, F2R1 otherwise"
+        "--strand_mode", type=str, metavar="STR",  choices=["F2R1", "F1R2"],
+        help="assign F2R1 to forward strand F1R2 (only for stranded data)"
     )
     parser.add_argument(
         "--min_offset", type=int, default=1,
