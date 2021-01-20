@@ -12,6 +12,7 @@ introns/
 annotations/
 prototypes/
 pl
+venv
 .idea/
 .git/
 .snakemake/

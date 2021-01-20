@@ -3,7 +3,7 @@ Installation
 ============
 pyIPSA requires `snakemake <https://snakemake.github.io/>`_.
 You can install it with all dependencies via `conda <https://conda.io/projects/conda/en/latest/index.html>`_ package management system.
-To create new conda environment and install snakemake with required packages simply run
+To create new conda environment and install snakemake with required packages simply run:
 
 .. code-block:: console
 
@@ -26,8 +26,6 @@ Dependencies:
     * pysam
     * pandas
     * numpy
-
-
 
 Installation on Arcuda
 ======================

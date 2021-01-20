@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'pyIPSA'
-copyright = '2020, Lev Mazaev'
+copyright = '2021, Lev Mazaev'
 author = 'Lev Mazaev'
 
 
