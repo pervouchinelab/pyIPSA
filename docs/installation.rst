@@ -1,45 +1,48 @@
-============
 Installation
 ============
-pyIPSA requires `snakemake <https://snakemake.github.io/>`_.
-You can install it with all dependencies via `conda <https://conda.io/projects/conda/en/latest/index.html>`_ package management system.
-To create new conda environment and install snakemake with required packages simply run:
 
-.. code-block:: console
+**pyIPSA** workflow consists of several tools written in Python.
+The workflow itself is based on the workflow management system
+`snakemake <https://snakemake.github.io/>`_.
 
-    $ conda create -n ipsa
-    $ conda activate ipsa
-    $ conda install -c conda-forge -c bioconda snakemake pysam pandas
+Download workflow
+-----------------
 
-To install the workflow itself retrieve it from GitHub
+To download pyIPSA just clone it from `github repository <https://github.com/Leoberium/pyIPSA>`_:
 
-.. code-block:: console
+.. code-block:: bash
 
     $ git clone https://github.com/Leoberium/pyIPSA.git
 
-Now you can get started.
+But it won't work if you don't have all the required packages installed.
 
-If you don't want to use conda, see `here <https://snakemake.readthedocs.io/en/stable/getting_started/installation.html>`_ for alternative ways of snakemake installation.
+Requirements
+------------
 
-Dependencies:
-    * snakemake
-    * pysam
-    * pandas
-    * numpy
+* Python >= 3.7
+* numpy >= 1.19.1
+* pandas >= 1.2.0
+* pysam >= 0.16.0.1
+* snakemake == 5.32.0
 
-Installation on Arcuda
-======================
+Install requirements using ``pip``
+----------------------------------
 
-For Arcuda cluster users the installation is simplier.
-Just Load module with Python and install all required packages with these commands:
+If you have Python environment with ``pip`` just move to directory with pyIPSA and run:
 
-.. code-block:: console
+.. code-block:: bash
+
+    $ pip install --upgrade -r requirements.txt
+
+Otherwise you need to install Python and pip firstly.
+
+Installing on Arcuda
+----------------------
+
+For Arcuda cluster users the installation is quite similar.
+Move to pyIPSA directory, load module with Python and install all required packages:
+
+.. code-block:: bash
 
     $ module load ScriptLang/python/3.8.3
-    $ pip3 install --user --upgrade snakemake pandas pysam
-
-Then retrieve the workflow from GitHub:
-
-.. code-block:: console
-
-    $ git clone https://github.com/Leoberium/pyIPSA.git
+    $ pip3 install --user --upgrade -r requirements.txt

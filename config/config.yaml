@@ -38,7 +38,7 @@ max_intron_length: 100000
 # Entropy threshold
 entropy: 1.5
 
-# Total count threhold
+# Total count threshold
 total_count: 1
 
 # Use only GT/AG splice sites
