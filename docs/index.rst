@@ -5,6 +5,7 @@ pyIPSA
 
 .. toctree::
 
+    introduction
     overview
     installation
     running
