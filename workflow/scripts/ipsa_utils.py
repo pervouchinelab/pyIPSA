@@ -1,14 +1,20 @@
-import time
-import sys
 import gzip
+import sys
+import time
 from typing import List, Set, Tuple, Dict
+
 from .ipsa_config import *
 
 
-def load_splice_sites(dir_path: str) -> Dict[str, Set[Tuple[int, int]]]:
-    """Loads splice sites for all genomes
-    and saves them in dictionary as start-stop pairs"""
-    splice_sites_by_genome = dict()
+def load_pairs(dir_path: str) -> Dict[str, Set[Tuple[int, int]]]:
+    """
+    Load start-stop pairs from all known junctions.
+    
+    :param dir_path: directory storing known junctions
+    :return: dictionary mapping genome to all its junctions' start-stop pairs
+    """
+    junctions_by_genome = dict()
+
     for genome in AVAILABLE_GENOMES:
         pairs = set()
         with gzip.open(dir_path + f"/{genome}.ss.tsv.gz", "rt") as f:
@@ -16,13 +22,18 @@ def load_splice_sites(dir_path: str) -> Dict[str, Set[Tuple[int, int]]]:
                 _, left, right, _ = line.strip().split("\t")
                 left, right = int(left), int(right)
                 pairs.add((left, right))
-        splice_sites_by_genome[genome] = pairs
-    return splice_sites_by_genome
+        junctions_by_genome[genome] = pairs
+
+    return junctions_by_genome
 
 
 def ref_names_from_file(filename: str) -> List[str]:
-    """Extracts reference names from annotation file or
-    file with splice sites"""
+    """
+    Extract reference names from annotation file or file with known junctions.
+
+    :param filename: file with known junctions or any tab-delimited file with reference names in the first column
+    :return: sorted list of reference names
+    """
     a = set()
     with gzip.open(filename, 'rt') as gtf:
         for line in gtf:
@@ -45,7 +56,7 @@ def ref_names_from_file(filename: str) -> List[str]:
 
 
 def timer(func):
-    """Execution time profiling decorator"""
+    """Execution time profiling decorator."""
     def wrapper(*args, **kwargs):
         start = time.time()
         result = func(*args, **kwargs)

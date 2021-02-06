@@ -89,4 +89,3 @@ Filter junctions or sites using 3 different criteria:
 
 The output is a gzipped tab-delimited file named ``<sample>.J6.gz`` in case of junctions or
 ``<sample>.(P)S6.gz`` in case of sites.
-
