@@ -5,7 +5,9 @@ functions that count reads which support these splice junctions.
 """
 import argparse
 from collections import namedtuple, defaultdict, Counter
-from typing import Tuple, List, Dict, DefaultDict
+from pathlib import Path
+from typing import Any, DefaultDict, Dict, List, Tuple
+
 
 import pandas as pd
 import pysam
@@ -30,16 +32,16 @@ def parse_cli_args() -> Dict:
         help="input alignment file (BAM)"
     )
     parser.add_argument(
-        "-s", "--splice_sites", type=str, metavar="DIR", required=True,
-        help="directory with annotated splice sites"
+        "-k", "--known", type=str, metavar="DIR", required=True,
+        help="directory with annotated junctions"
     )
     parser.add_argument(
         "-o", "--output", type=str, metavar="FILE", required=True,
         help="output file name (step 1)"
     )
     parser.add_argument(
-        "-l", "--stats", type=str, metavar="FILE", required=True,
-        help="output stats file name"
+        "-l", "--lib_stats", type=str, metavar="FILE", required=True,
+        help="filename to save library parameters and some stats"
     )
     parser.add_argument(
         "-u", "--unique", action="store_true",
@@ -184,20 +186,23 @@ def junctions2dataframe(junctions_with_counts: DefaultDict[RawJunction, List[int
     return df
 
 
-def guess_genome(df: pd.DataFrame, dir_with_known_junctions: str) -> Dict[str, int]:
+def guess_genome(
+        df: pd.DataFrame,
+        dir_path: str
+) -> Dict[str, int]:
     """
     Compute how many newly discovered junctions intersect with known ones in all available genomes.
     Genome with most hits is the most probable source of newly discovered junctions.
 
     :param df: DataFrame with junctions and their counts in each offset
-    :param dir_with_known_junctions: directory storing known junctions from available genomes
+    :param dir_path: directory storing known junctions from available genomes
     :return: dictionary mapping genome to number of hits
     """
     # prepare start-stop pairs from novel junctions
     pairs = df["junction_id"].apply(lambda junction_id: tuple(map(int, junction_id.split("_")[1:])))
     pairs = set(pairs)
     # prepare start-stop from known junctions
-    pairs_by_genome = load_pairs(dir_with_known_junctions)
+    pairs_by_genome = load_pairs(dir_path)
 
     hits_by_genome = dict()
     for genome in pairs_by_genome:
@@ -206,75 +211,133 @@ def guess_genome(df: pd.DataFrame, dir_with_known_junctions: str) -> Dict[str, i
     return hits_by_genome
 
 
-def compute_lib_params(df: pd.DataFrame) -> List[str]:
+def guess_lib_type(
+        df: pd.DataFrame,
+        dir_path: str,
+        genome: str
+) -> str:
     """
-    Compute library parameters from junctions DataFrame.
-    
-    :param df: DataFrame with junctions and their counts in each offset 
-    :return: list of strings describing parameters
-    """
-    a = []
-    df_indexed = df.set_index(['junction_id', 'offset'])
+    Guess library type by intersecting novel junctions with known ones.
 
-    # How many different read pairs?
-    col_sums = df_indexed.sum(axis=0)
-    a += ["Sum of counts for each read type:\n", f"{col_sums.to_string()}\n\n"]
+    :param df: DataFrame with junctions and their counts in each offset
+    :param dir_path: directory storing known junctions from available genomes
+    :param genome: genome string
+    :return: library type - F2R1 or F1R2 or unknown
+    """
+    known = pd.read_table(Path(dir_path, f"{genome}.ss.tsv.gz"), header=None)
+    known["junction_id"] = known[0] + "_" + known[1].astype(str) + "_" + known[2].astype(str)
+    known = known.set_index("junction_id").drop([0, 1, 2], axis=1)
+    known.columns = ["strand"]
+
+    novel = df.drop(["offset", "F1", "R1", "F2", "R2"], axis=1).groupby(["junction_id"]).sum()
+
+    table = known.join(novel, on=["junction_id"], how="inner").groupby("strand").sum()
+
+    if table.loc["+", "F2+R1"] > 10 * table.loc["+", "F1+R2"]:
+        return "F2R1"
+    elif table.loc["+", "F1+R2"] > 10 * table.loc["+", "F2+R1"]:
+        return "F1R2"
+    else:
+        return "unknown"
+
+
+def compute_lib_params(
+        df: pd.DataFrame,
+        dir_path: str,
+        read_length: int
+) -> Dict[str, Any]:
+    """
+    Compute library parameters and some stats from junctions DataFrame.
+
+    :param df: DataFrame with junctions and their counts in each offset
+    :param dir_path: directory storing known junctions from available genomes
+    :param read_length: precomputed read length
+    :return: dictionary of library parameters
+    """
+    params = {"read length": read_length}
+    df_indexed = df.set_index(["junction_id", "offset"])
+
+    # Guess organism and its genome version
+    params["hits by genome"] = guess_genome(df=df, dir_path=dir_path)
+    params["genome"] = max(params["hits by genome"], key=params["hits by genome"].get)
+
+    # Total counts by read type
+    params["counts"] = df_indexed.sum(axis=0)
 
     # Are reads paired?
-    paired = all(col_sums > 0)
-    a += [f"Guess: the data is {('single', 'pair')[paired]}-end\n", "-" * H + "\n"]
+    params["paired"] = (params["counts"] > 0).all()
 
-    # Correlation analysis
-    df_indexed['F1+R2'] = df_indexed['F1'] + df_indexed['R2']
-    df_indexed['F2+R1'] = df_indexed['F2'] + df_indexed['R1']
-    corr_mat = df_indexed.groupby("junction_id").sum().corr()
-    a += ["Correlation matrix:\n\n", f"{corr_mat.round(2).to_string()}\n\n"]
+    # Correlation matrix for read pairs
+    df_indexed["F1+R2"] = df_indexed["F1"] + df_indexed["R2"]
+    df_indexed["F2+R1"] = df_indexed["F2"] + df_indexed["R1"]
+    correlation_matrix = df_indexed.groupby("junction_id").sum().corr()
+    params["correlation matrix"] = correlation_matrix
 
     # Is data stranded?
-    if paired:
-        stranded = bool(corr_mat.loc['F1+R2', 'F2+R1'] <= 0.5)
+    if params["paired"]:
+        params["stranded"] = bool(correlation_matrix.loc["F1+R2", "F2+R1"] <= 0.5)
     else:
-        if all(col_sums[:2]):
-            stranded = bool(corr_mat.loc['F1', 'R1'] <= 0.5)
+        if (params["counts"][:2] > 0).all() and (params["counts"][2:] == 0).all():
+            params["stranded"] = bool(correlation_matrix.loc["F1", "R1"] <= 0.5)
         else:
-            stranded = bool(corr_mat.loc['F2', 'R2'] <= 0.5)
-    a += [f"Guess: the data is {('un', '')[stranded]}stranded\n", "-" * H + "\n"]
+            params["stranded"] = bool(correlation_matrix.loc["F2", "R2"] <= 0.5)
 
-    # Distribution of offsets
-    offsets = df_indexed.groupby(by="offset").sum()
-    a += ["Offsets distribution:\n\n", offsets.reset_index().to_string(index=False)]
+    # Library - F1R2 or F2R1?
+    if params["stranded"]:
+        params["library type"] = guess_lib_type(
+            df=df,
+            dir_path=dir_path,
+            genome=params["genome"]
+        )
+    else:
+        params["library type"] = "Unstranded"
 
-    return a
+    # Offsets distribution
+    params["offsets"] = df_indexed.groupby(by="offset").sum().reset_index()
+
+    return params
 
 
-def write_lib_params(filename: str, read_length: int,
-                     hits_by_genome: Dict[str, int], stats: List[str]):
-    tmp = [f"Guess: genome is {max(hits_by_genome, key=hits_by_genome.get)}\n"]
-    tmp += [f"Number of hits with {genome} genome: {hits}\n" for genome, hits in hits_by_genome.items()]
-    tmp += ["-" * H + "\n", f"Read length is {read_length}\n", "-" * H + "\n"]
-    with open(filename, "w") as txt:
-        txt.writelines(tmp + stats)
+def write_lib_params(
+        params: Dict[str, Any],
+        filename: str
+):
+    with open(filename, "w") as f:
+        for par in ("read length", "genome", "paired", "stranded", "library type"):
+            f.write(f"{par}: {params[par]}\n")
+        sep = "-" * H + "\n"
+        f.write(sep)
+        f.write("Number of hits for each genome:\n")
+        f.writelines(f"{genome}: {hits}\n" for genome, hits in params["hits by genome"].items())
+        f.write(sep)
+        f.write("Number of reads of each type:\n")
+        f.write(params["counts"].to_string() + "\n")
+        f.write(sep)
+        f.write("Correlation matrix:\n\n")
+        f.write(params["correlation matrix"].to_string() + "\n")
+        f.write(sep)
+        f.write("Offsets distribution:\n\n")
+        f.write(params["offsets"].to_string())
 
 
 def main():
     args = parse_cli_args()
     # read BAM and get junctions
     bam = pysam.AlignmentFile(args["input"], threads=args["threads"])
-    junctions, read_length = alignment2junctions(alignment=bam,
-                                                 primary=args["primary"],
-                                                 unique=args["unique"])
+    junctions, read_length = alignment2junctions(
+        alignment=bam, primary=args["primary"], unique=args["unique"]
+    )
     df_junctions = junctions2dataframe(junctions_with_counts=junctions)
-    # guess the genome
-    hits_by_genome = guess_genome(df=df_junctions,
-                                  dir_with_known_junctions=args["splice_sites"])
-    # get alignment stats
-    stats = compute_lib_params(df=df_junctions)
+    # get library parameters
+    lib_params = compute_lib_params(
+        df=df_junctions,
+        dir_path=args["known"],
+        read_length=read_length
+    )
     # write outputs
-    write_lib_params(filename=args["stats"], read_length=read_length,
-                     hits_by_genome=hits_by_genome, stats=stats)
-    df_junctions.to_csv(args["output"], sep="\t", index=False,
-                        header=False, compression="gzip")
+    df_junctions.to_csv(args["output"], sep="\t", index=False, header=False, compression="gzip")
+    write_lib_params(params=lib_params, filename=args["lib_stats"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

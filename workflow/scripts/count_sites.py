@@ -39,10 +39,6 @@ def parse_cli_args():
         help="output file name (step 1)"
     )
     parser.add_argument(
-        "-m", "--strand_mode", type=str, metavar="STR", choices=["F1R2", "F2R1"],
-        help="F1R2 assigned to forward strand in case of stranded data, F2R1 otherwise"
-    )
-    parser.add_argument(
         "-u", "--unique", action="store_true",
         help="only use uniquely mapped reads"
     )
@@ -58,23 +54,26 @@ def parse_cli_args():
     return vars(args)
 
 
-def read_stats(filename: str) -> Tuple[str, int, bool, bool]:
+def read_stats(filename: str) -> Tuple[int, str, bool, bool, str]:
     """Read sample stats file and return read length,
     genome and its version, and if reads are paired or stranded."""
     with open(filename, "r") as f:
         for line in f:
-            if " is " not in line:
-                continue
-            left, right = line.strip().split(" is ")
-            if "genome" in left:
-                genome = right
-            elif "Read" in left:
+            if line.startswith("-"):
+                break
+            left, right = line.strip().split(": ")
+            if left[0] == "r":
                 read_length = int(right)
-            elif right.endswith("-end"):
-                paired = True if right[:-4] == "pair" else False
-            elif right.endswith("stranded"):
-                stranded = True if len(right) == 8 else False
-    return genome, read_length, paired, stranded
+            elif left[0] == "g":
+                genome = right
+            elif left[0] == "p":
+                paired = bool(right)
+            elif left[0] == "s":
+                stranded = bool(right)
+            elif left[0] == "l":
+                library_type = right
+
+    return read_length, genome, paired, stranded, library_type
 
 
 def junctions2sites(filename: str) -> DefaultDict[Tuple[str, int], Set]:
@@ -204,8 +203,9 @@ def alignment2counts(
         strand_mode: str
 ) -> Counter[SiteWithOffset]:
     """
-    TODO: Takes an alignment and dictionary of splice sites as input
-     and returns dictionary of splice sites with their counts"""
+    Take an alignment and dictionary of splice sites as input
+    and returns dictionary of splice sites with their counts
+    """
 
     trans = prepare_ref_names(alignment)
 
@@ -277,11 +277,11 @@ def main():
     args = parse_cli_args()
     bam = pysam.AlignmentFile(args["input"], threads=args["threads"])
     sites = junctions2sites(filename=args["junctions"])
-    genome, read_length, paired, stranded = read_stats(args["stats"])
+    read_length, genome, paired, stranded, library_type = read_stats(args["stats"])
     counts = alignment2counts(
         alignment=bam, sites=sites,
         unique=args["unique"], primary=args["primary"],
-        stranded=stranded, strand_mode=args["strand_mode"]
+        stranded=stranded, strand_mode=library_type
     )
     df = counts2dataframe(counts=counts)
     df.to_csv(args["output"], sep="\t", index=False, header=False, compression="gzip")

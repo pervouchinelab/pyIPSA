@@ -13,8 +13,7 @@ import pandas as pd
 
 JP = namedtuple(
     "JunctionParams",
-    ["strand", "total_count", "staggered_count", "entropy",
-     "annotation_status", "sequence"]
+    ["strand", "total_count", "staggered_count", "entropy", "annotation_status", "sequence"]
 )
 
 
@@ -35,12 +34,18 @@ def parse_cli_args() -> Dict:
         "-o", "--output", type=str, metavar="FILE",
         required=True, help="output file name"
     )
+    parser.add_argument(
+        "-s", "--stats", type=str, metavar="FILE",
+        required=True, help="junction stats file"
+    )
     args = parser.parse_args()
     return vars(args)
 
 
 def read_junctions(filename: str) -> DefaultDict[Tuple, List[JP]]:
-    """Read annotated junctions file from step 3 and return defaultdict."""
+    """
+    Load annotated junctions from step 3 to dictionary.
+    """
     dd = defaultdict(list)
 
     with gzip.open(filename, "rt") as junctions:
@@ -52,17 +57,19 @@ def read_junctions(filename: str) -> DefaultDict[Tuple, List[JP]]:
             ref_name, left, right, strand = junction_id.split("_")
 
             dd[(ref_name, left, right)].append((
-                JP(strand=strand, total_count=total_count,
-                   staggered_count=staggered_count, entropy=entropy,
-                   annotation_status=annotation_status, sequence=sequence)
+                JP(strand=strand, total_count=int(total_count),
+                   staggered_count=int(staggered_count), entropy=entropy,
+                   annotation_status=int(annotation_status), sequence=sequence)
             ))
 
     return dd
 
 
 def choose_strand(dd: DefaultDict[Tuple, List[JP]], filename: str) -> pd.DataFrame:
-    """Choose strand for each junction using annotation status of each strand and
-    ranked list of splice site sequences and return dataframe."""
+    """
+    Choose strand for each junction using annotation status of each strand and
+    ranked list of splice site sequences and return dataframe.
+    """
     ranked = dict()  # prepare ranked sequences
     with open(filename, "r") as f:
         for line in f:
@@ -74,7 +81,7 @@ def choose_strand(dd: DefaultDict[Tuple, List[JP]], filename: str) -> pd.DataFra
     for junction, candidates in dd.items():
         chosen = max(
             candidates,
-            key=lambda x: (int(x.annotation_status), ranked.get(x.sequence, 0))
+            key=lambda x: (x.annotation_status, ranked.get(x.sequence, 0))
         )
 
         ref_name, left, right = junction
@@ -90,11 +97,38 @@ def choose_strand(dd: DefaultDict[Tuple, List[JP]], filename: str) -> pd.DataFra
     return df
 
 
+def compute_junction_stats(df: pd.DataFrame) -> Dict[str, int]:
+    """
+    Compute how many junctions correspond to GTAG and non-GTAG splice sites
+    and how many junctions have at least one annotated end.
+
+    :param df: DataFrame with junctions
+    :return: dictionary with computed stats
+    """
+    stats = dict()
+
+    gtag_rows = df["seq"] == "GTAG"
+    stats["GTAG"] = df["total_count"][gtag_rows].sum()
+    stats["Non-GTAG"] = df["total_count"][~gtag_rows].sum()
+    stats["GTAG / non-GTAG ratio"] = round(stats["GTAG"] / stats["Non-GTAG"], 2)
+
+    annotated_rows = df["ann"] >= 1
+    stats["Annotated"] = df["total_count"][annotated_rows].sum()
+    stats["Not annotated"] = df["total_count"][~annotated_rows].sum()
+    stats["Annotated / not annotated ratio"] = round(stats["Annotated"] / stats["Not annotated"], 2)
+
+    return stats
+
+
 def main():
     args = parse_cli_args()
     dd = read_junctions(args["input"])
     df = choose_strand(dd=dd, filename=args["ranked"])
     df.sort_values(by=["junction_id"], inplace=True)
+    junction_stats = compute_junction_stats(df=df)
+    with open(args["stats"], "w") as f:
+        for key, value in junction_stats.items():
+            f.write(f"{key}: {value}\n")
     df.to_csv(args["output"], sep="\t", index=False, header=False, compression="gzip")
 
 

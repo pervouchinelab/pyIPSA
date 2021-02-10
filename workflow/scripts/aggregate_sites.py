@@ -34,23 +34,26 @@ def parse_cli_args() -> Dict:
     return vars(args)
 
 
-def read_stats(filename: str) -> Tuple[str, int, bool, bool]:
+def read_stats(filename: str) -> Tuple[int, str, bool, bool, str]:
     """Read sample stats file and return read length,
     genome and its version, and if reads are paired or stranded."""
     with open(filename, "r") as f:
         for line in f:
-            if " is " not in line:
-                continue
-            left, right = line.strip().split(" is ")
-            if "genome" in left:
-                genome = right
-            elif "Read" in left:
+            if line.startswith("-"):
+                break
+            left, right = line.strip().split(": ")
+            if left[0] == "r":
                 read_length = int(right)
-            elif right.endswith("-end"):
-                paired = True if right[:-4] == "pair" else False
-            elif right.endswith("stranded"):
-                stranded = True if len(right) == 8 else False
-    return genome, read_length, paired, stranded
+            elif left[0] == "g":
+                genome = right
+            elif left[0] == "p":
+                paired = bool(right)
+            elif left[0] == "s":
+                stranded = bool(right)
+            elif left[0] == "l":
+                library_type = right
+
+    return read_length, genome, paired, stranded, library_type
 
 
 def read_counts(filename: str) -> pd.DataFrame:
@@ -82,7 +85,7 @@ def aggregate(df: pd.DataFrame, min_offset: int, read_length: int) -> pd.DataFra
 def main():
     args = parse_cli_args()
     counts = read_counts(filename=args["input"])
-    genome, read_length, paired, stranded = read_stats(args["stats"])
+    read_length, genome, paired, stranded, library_type = read_stats(args["stats"])
     counts = aggregate(df=counts, min_offset=args["min_offset"], read_length=read_length)
     counts.sort_values(by=["site_id"], inplace=True)
     counts.to_csv(args["output"], sep="\t", index=False, header=False, compression="gzip")

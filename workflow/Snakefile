@@ -14,7 +14,8 @@ pooling_mode = "PR" if config["pooled"] else "R"
 
 rule all:
     input:
-        OUTPUT_DIR+"/overview.tsv",
+        OUTPUT_DIR+"/aggregated_library_stats.tsv",
+        OUTPUT_DIR+"/aggregated_junction_stats.tsv",
         expand("{out}/{p}/{sample}.{p}.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode)
 
 
@@ -24,23 +25,12 @@ include: "rules/genome.smk"
 include: "rules/pooled_sites.smk"
 
 
-rule add_replicates:
-    input:
-        stats=OUTPUT_DIR+"/J1/{sample}.stats"
-    output:
-        stats=OUTPUT_DIR+"/stats/{sample}.stats"
-    shell: "cp {input.stats} {output.stats}"
-
-
-rule describe_replicates:
-    input:
-        stats=expand("{out}/stats/{sample}.stats", out=OUTPUT_DIR, sample=samples)
-    output:
-        tsv=OUTPUT_DIR+"/overview.tsv"
-    shell:
-        "python3 -m workflow.scripts.describe_replicates "
-        "{input.stats} "
-        "-o {output.tsv}"
+# rule add_replicates:
+#     input:
+#         stats=OUTPUT_DIR+"/J1/{sample}.stats"
+#     output:
+#         stats=OUTPUT_DIR+"/stats/{sample}.stats"
+#     shell: "cp {input.stats} {output.stats}"
 
 
 rule compute_rates:

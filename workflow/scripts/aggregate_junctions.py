@@ -33,10 +33,6 @@ def parse_cli_args() -> Dict:
         required=True, help="output file name (step 2)"
     )
     parser.add_argument(
-        "--strand_mode", type=str, metavar="STR",  choices=["F2R1", "F1R2"],
-        help="assign F2R1 to forward strand F1R2 (only for stranded data)"
-    )
-    parser.add_argument(
         "--min_offset", type=int, default=1,
         metavar="INT", help="minimal offset"
     )
@@ -52,23 +48,26 @@ def parse_cli_args() -> Dict:
     return vars(args)
 
 
-def read_stats(filename: str) -> Tuple[str, int, bool, bool]:
+def read_stats(filename: str) -> Tuple[int, str, bool, bool, str]:
     """Read sample stats file and return read length,
     genome and its version, and if reads are paired or stranded."""
     with open(filename, "r") as f:
         for line in f:
-            if " is " not in line:
-                continue
-            left, right = line.strip().split(" is ")
-            if "genome" in left:
-                genome = right
-            elif "Read" in left:
+            if line.startswith("-"):
+                break
+            left, right = line.strip().split(": ")
+            if left[0] == "r":
                 read_length = int(right)
-            elif right.endswith("-end"):
-                paired = True if right[:-4] == "pair" else False
-            elif right.endswith("stranded"):
-                stranded = True if len(right) == 8 else False
-    return genome, read_length, paired, stranded
+            elif left[0] == "g":
+                genome = right
+            elif left[0] == "p":
+                paired = bool(right)
+            elif left[0] == "s":
+                stranded = bool(right)
+            elif left[0] == "l":
+                library_type = right
+
+    return read_length, genome, paired, stranded, library_type
 
 
 def read_counts(filename: str) -> pd.DataFrame:
@@ -154,8 +153,8 @@ def filter_introns(df: pd.DataFrame,
 def main():
     args = parse_cli_args()
     counts = read_counts(filename=args["input"])
-    genome, read_length, paired, stranded = read_stats(args["stats"])
-    counts = add_strand(df=counts, stranded=stranded, strand_mode=args["strand_mode"])
+    read_length, genome, paired, stranded, library_type = read_stats(args["stats"])
+    counts = add_strand(df=counts, stranded=stranded, strand_mode=library_type)
     counts = aggregate(df=counts, min_offset=args["min_offset"], read_length=read_length)
     counts = filter_introns(df=counts,
                             min_intron_length=args["min_intron_length"],

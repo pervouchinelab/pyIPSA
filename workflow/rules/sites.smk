@@ -2,8 +2,8 @@ rule count_sites:
     input:
         bam=INPUT_DIR+"/{sample}.bam",
         bam_index=rules.index_bam.output.bam_index,
-        junctions=OUTPUT_DIR+"/J4/{sample}.J4.gz",
-        stats=OUTPUT_DIR+"/J1/{sample}.stats"
+        junctions=rules.choose_strand.output.stranded_junctions,
+        stats=rules.count_junctions.output.library_stats
     output:
         sites=OUTPUT_DIR+"/S1/{sample}.S1.gz"
     params:
@@ -23,7 +23,7 @@ rule count_sites:
 rule aggregate_sites:
     input:
         sites=rules.count_sites.output.sites,
-        stats=OUTPUT_DIR+"/J1/{sample}.stats"
+        stats=rules.count_sites.input.stats
     output:
         aggregated_sites=OUTPUT_DIR+"/S2/{sample}.S2.gz"
     params:

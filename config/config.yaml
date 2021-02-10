@@ -2,8 +2,8 @@
 # STAGE 0: preparation of data
 
 # Folders with input and output data
-input_dir: input
-output_dir: output
+input_dir: _input
+output_dir: _output
 pooled: False
 
 # STAGE 1: extract junctions/sites

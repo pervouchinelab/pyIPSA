@@ -3,7 +3,7 @@ rule count_pooled_sites:
         bam=INPUT_DIR+"/{sample}.bam",
         bam_index=rules.index_bam.output.bam_index,
         junctions=rules.merge_junctions.output.merged_junctions,
-        stats=OUTPUT_DIR+"/J1/{sample}.stats"
+        stats=rules.count_junctions.output.library_stats
     output:
         pooled_sites=OUTPUT_DIR+"/PS1/{sample}.PS1.gz"
     params:
@@ -25,7 +25,7 @@ rule count_pooled_sites:
 rule aggregate_pooled_sites:
     input:
         sites=rules.count_pooled_sites.output.pooled_sites,
-        stats=OUTPUT_DIR+"/J1/{sample}.stats"
+        stats=rules.count_pooled_sites.input.stats
     output:
         aggregated_pooled_sites=OUTPUT_DIR+"/PS2/{sample}.PS2.gz"
     params:

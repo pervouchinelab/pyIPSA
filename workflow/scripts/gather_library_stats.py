@@ -8,7 +8,7 @@ import pandas as pd
 def parse_cli_args() -> Dict:
     """Parses command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Describe replicates (pivot table).",
+        description="Gather library stats from given replicates (pivot table).",
         usage="%(prog)s [-h] replicate1 [replicate2 ...] -o FILE"
     )
     parser.add_argument(
@@ -29,26 +29,28 @@ def stats2df(replicates: List[str]) -> pd.DataFrame:
 
     for replicate in replicates:
         p = Path(replicate)
-        name = p.stem
+        name = Path(p.stem).stem
 
         with p.open("r") as f:
             for line in f:
-                if " is " not in line:
-                    continue
-                left, right = line.strip().split(" is ")
-                if "genome" in left:
+                if line.startswith("-"):
+                    break
+                left, right = line.strip().split(": ")
+                if left[0] == "r":
+                    read_length = right
+                elif left[0] == "g":
                     genome = right
-                if "Read" in left:
-                    read_length = int(right)
-                if right.endswith("-end"):
-                    paired = True if right[:-4] == "pair" else False
-                if right.endswith("stranded"):
-                    stranded = True if len(right) == 8 else False
+                elif left[0] == "p":
+                    paired = right
+                elif left[0] == "s":
+                    stranded = right
+                elif left[0] == "l":
+                    library_type = right
 
-        records.append((name, genome, read_length, paired, stranded))
+        records.append((name, read_length, genome, paired, stranded, library_type))
 
     df = pd.DataFrame(records)
-    df.columns = ["replicate", "genome", "read_length", "paired", "stranded"]
+    df.columns = ["replicate", "read length", "genome", "paired", "stranded", "library type"]
     df.sort_values(by=["replicate"])
     return df
 
