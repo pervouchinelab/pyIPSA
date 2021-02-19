@@ -108,7 +108,9 @@ def compute_junction_stats(df: pd.DataFrame) -> Dict[str, int]:
     stats = dict()
 
     gtag_rows = df["seq"] == "GTAG"
+    ctac_rows = df["seq"] == "CTAC"
     stats["GTAG"] = df["total_count"][gtag_rows].sum()
+    stats["CTAC"] = df["total_count"][ctac_rows].sum()
     stats["Non-GTAG"] = df["total_count"][~gtag_rows].sum()
     stats["GTAG / non-GTAG ratio"] = round(stats["GTAG"] / stats["Non-GTAG"], 2)
 

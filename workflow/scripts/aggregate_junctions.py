@@ -61,9 +61,9 @@ def read_stats(filename: str) -> Tuple[int, str, bool, bool, str]:
             elif left[0] == "g":
                 genome = right
             elif left[0] == "p":
-                paired = bool(right)
+                paired = (right == "True")
             elif left[0] == "s":
-                stranded = bool(right)
+                stranded = (right == "True")
             elif left[0] == "l":
                 library_type = right
 
