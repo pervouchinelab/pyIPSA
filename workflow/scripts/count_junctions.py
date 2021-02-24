@@ -233,9 +233,9 @@ def guess_lib_type(
 
     table = known.join(novel, on=["junction_id"], how="inner").groupby("strand").sum()
 
-    if table.loc["+", "F2+R1"] > 10 * table.loc["+", "F1+R2"]:
+    if table.loc["+", "F2+R1"] > 50 * table.loc["+", "F1+R2"]:
         return "F2R1"
-    elif table.loc["+", "F1+R2"] > 10 * table.loc["+", "F2+R1"]:
+    elif table.loc["+", "F1+R2"] > 50 * table.loc["+", "F2+R1"]:
         return "F1R2"
     else:
         return "unknown"
@@ -285,7 +285,7 @@ def compute_lib_params(
     # Library - F1R2 or F2R1?
     if params["stranded"]:
         params["library type"] = guess_lib_type(
-            df=df,
+            df=df_indexed.reset_index(),
             dir_path=dir_path,
             genome=params["genome"]
         )
