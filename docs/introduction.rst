@@ -13,4 +13,4 @@ The pyIPSA workflow consists of several tools which process alignment files.
     :width: 800
     :alt: Scheme of IPSA workflow
 
-Each tool has its own output which is used as input for the
+Each tool has its own output which is used as input for the following tools.

@@ -107,8 +107,8 @@ checkpoint gather_junction_stats:
     output:
         tsv=OUTPUT_DIR+"/aggregated_junction_stats.tsv"
     run:
+        d = defaultdict(list)
         for replicate in input.junction_stats:
-            d = defaultdict(list)
             p = Path(replicate)
             name = Path(p.stem).stem
             with p.open("r") as f:
@@ -118,9 +118,9 @@ checkpoint gather_junction_stats:
                         break
                     left, right = line.strip().split(": ")
                     d[left].append(right)
-            df = pd.DataFrame(d)
-            df.sort_values(by="replicate")
-            df.to_csv(output.tsv, index=False, sep="\t")
+        df = pd.DataFrame(d)
+        df.sort_values(by="replicate")
+        df.to_csv(output.tsv, index=False, sep="\t")
 
 
 rule filter_junctions:
