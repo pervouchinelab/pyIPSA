@@ -9,15 +9,13 @@ rule count_pooled_sites:
     params:
         threads=THREADS,
         primary=("", "-p")[config["primary"]],
-        unique=("", "-u")[config["unique"]],
-        strand_mode=config["strand_mode"]
+        unique=("", "-u")[config["unique"]]
     shell:
         "python3 -m workflow.scripts.count_sites "
         "-i {input.bam} "
         "-j {input.junctions} "
         "-s {input.stats} "
         "-o {output.pooled_sites} "
-        "-m {params.strand_mode} "
         "{params.primary} {params.unique} "
         "-t {params.threads}"
 
