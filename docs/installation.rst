@@ -20,9 +20,9 @@ Requirements
 ------------
 
 * Python >= 3.7
-* numpy >= 1.19.1
-* pandas >= 1.2.0
-* pysam >= 0.16.0.1
+* numpy == 1.19.1
+* pandas == 1.2.0
+* pysam == 0.16.0.1
 * snakemake == 5.32.0
 
 Install requirements using ``pip``

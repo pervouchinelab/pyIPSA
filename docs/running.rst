@@ -17,6 +17,15 @@ To run in cluster environment using Grid Engine:
 
     $ snakemake --cluster qsub --j <number of jobs>
 
+Also you can create your own custom config. Just copy default config to the same folder
+and change the values you need. To run with custom config:
+
+.. code-block:: bash
+
+    $ snakemake --configfile config/my_config.yaml
+
+Default config file ``config/config.yaml`` must be present along with custom one.
+
 For other running options consult with
 `snakemake docs <https://snakemake.readthedocs.io/en/stable/executing/cli.html>`_.
 
@@ -29,7 +38,6 @@ Configuration
 * ``primary`` - if ``True``, use only primary alignment for multimapped reads
 * ``unique`` - if ``True``, do not use multimapped reads
 * ``threads`` - number of threads used to read single alignment file
-* ``strand_mode`` - to remove in future
 * ``min_offset`` - minimal offset when aggregating junctions
 * ``min_intron_length`` - minimal allowed length of junction
 * ``max_intron_length`` - maximal allowed length of junction

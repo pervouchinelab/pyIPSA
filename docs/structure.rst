@@ -1,4 +1,4 @@
-Structure
+Pipeline
 =========
 
 Input
@@ -6,8 +6,8 @@ Input
 
 ``input_dir`` in configuration file. Must contain at least one alignment file (BAM).
 
-Output
-------
+Outputs
+-------
 
 ``output_dir`` in configuration file. If the run was fully successful, the output has the following structures:
 

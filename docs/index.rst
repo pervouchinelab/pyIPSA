@@ -9,5 +9,6 @@ pyIPSA
     overview
     installation
     running
+    output
     structure
     tools

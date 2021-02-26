@@ -2,8 +2,8 @@
 # STAGE 0: preparation of data
 
 # Folders with input and output data
-input_dir: _input
-output_dir: _output
+input_dir: input
+output_dir: output
 pooled: False
 
 # STAGE 1: extract junctions/sites
@@ -17,11 +17,10 @@ unique: False
 threads: 1
 
 # Read pair orientation that corresponds to forward strand in strand-specific protocols
-strand_mode: F2R1
+# strand_mode: F2R1
 # F2 means that read2 is on the forward strand, R1 - read1 on the reverse strand
 # Possible values: F2R1, F1R2
 # In Illumina strand-specific protocol it is usually F2R1
-
 
 # STAGE 2: aggregate junctions/sites
 
