@@ -27,6 +27,9 @@ threads: 1
 # Minimal offset for aggregation
 min_offset: 4
 
+# Minimal overhang for polyA aggregation
+min_overhang: 8
+
 # Minimal intron length
 min_intron_length: 40
 

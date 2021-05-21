@@ -10,28 +10,34 @@ OUTPUT_DIR = config["output_dir"]
 THREADS = config["threads"]
 samples, = glob_wildcards(INPUT_DIR + "/{sample}.bam")
 
-pooling_mode = "PR" if config["pooled"] else "R"
+pooling_mode = "P" if config["pooled"] else ""
 
 rule all:
     input:
-        OUTPUT_DIR+"/aggregated_library_stats.tsv",
-        OUTPUT_DIR+"/aggregated_junction_stats.tsv",
-        expand("{out}/{p}/{sample}.{p}.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode)
+        expand("{out}/{p}R/{sample}.{p}R.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode)
+
+rule J1:
+    input:
+        OUTPUT_DIR+"/aggregated_library_stats.tsv"
+
+rule J:
+    input:
+        expand("{out}/J6/{sample}.J6.gz", sample=samples, out=OUTPUT_DIR)
+
+rule S:
+    input:
+        expand("{out}/{p}S6/{sample}.{p}S6.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode)
+
+rule A:
+    input:
+        expand("{out}/A2/{sample}.A2.gz", sample=samples, out=OUTPUT_DIR)
 
 
 include: "rules/junctions.smk"
 include: "rules/sites.smk"
 include: "rules/genome.smk"
 include: "rules/pooled_sites.smk"
-
-
-# rule add_replicates:
-#     input:
-#         stats=OUTPUT_DIR+"/J1/{sample}.stats"
-#     output:
-#         stats=OUTPUT_DIR+"/stats/{sample}.stats"
-#     shell: "cp {input.stats} {output.stats}"
-
+include: "rules/polyA.smk"
 
 rule compute_rates:
     input:

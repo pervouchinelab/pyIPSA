@@ -5,7 +5,7 @@ This module contains functions that:
 """
 import argparse
 import gzip
-import collections as cts
+from collections import Counter, defaultdict, namedtuple
 from typing import Dict, DefaultDict, Set, Tuple, Counter
 
 import pandas as pd
@@ -13,8 +13,8 @@ import pysam
 
 from .ipsa_config import *
 
-SiteWithOffset = cts.namedtuple("SiteWithOffset", ["site_id", "offset"])
-SiteWithCount = cts.namedtuple("Site", ["site_id", "offset", "total_count"])
+SiteWithOffset = namedtuple("SiteWithOffset", ["site_id", "offset"])
+SiteWithCount = namedtuple("Site", ["site_id", "offset", "total_count"])
 
 
 def parse_cli_args():
@@ -83,7 +83,7 @@ def junctions2sites(filename: str) -> DefaultDict[Tuple[str, int], Set]:
     :param filename: input junctions file with strand info (step >= 4)
     :return: dictionary with splice sites (flanking nucleotides)
     """
-    sites = cts.defaultdict(set)
+    sites = defaultdict(set)
 
     # read junctions file
     with gzip.open(filename, 'rt') as jf:
@@ -209,7 +209,7 @@ def alignment2counts(
 
     trans = prepare_ref_names(alignment)
 
-    counts = cts.Counter()
+    counts = Counter()
     segment: pysam.AlignedSegment  # just annotation line
 
     # iterating through the alignment file
