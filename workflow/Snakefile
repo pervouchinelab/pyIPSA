@@ -14,7 +14,9 @@ pooling_mode = "P" if config["pooled"] else ""
 
 rule all:
     input:
-        expand("{out}/{p}R/{sample}.{p}R.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode)
+        expand("{out}/{p}R/{sample}.{p}R.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode),
+        OUTPUT_DIR+"/aggregated_junction_stats.tsv"
+
 
 rule J1:
     input:
@@ -22,11 +24,13 @@ rule J1:
 
 rule J:
     input:
-        expand("{out}/J6/{sample}.J6.gz", sample=samples, out=OUTPUT_DIR)
+        expand("{out}/J6/{sample}.J6.gz", sample=samples, out=OUTPUT_DIR),
+        OUTPUT_DIR+"/aggregated_junction_stats.tsv"
 
 rule S:
     input:
-        expand("{out}/{p}S6/{sample}.{p}S6.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode)
+        expand("{out}/{p}S6/{sample}.{p}S6.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode),
+        OUTPUT_DIR+"/aggregated_junction_stats.tsv"
 
 rule A:
     input:
