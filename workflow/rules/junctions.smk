@@ -42,7 +42,7 @@ checkpoint gather_library_stats:
         tsv=OUTPUT_DIR+"/aggregated_library_stats.tsv"
     shell:
         "python3 -m workflow.scripts.gather_library_stats "
-        "{input.library_stats} "
+        "{OUTPUT_DIR}/J1  "
         "-o {output.tsv}"
 
 

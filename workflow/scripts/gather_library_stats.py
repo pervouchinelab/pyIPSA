@@ -8,12 +8,12 @@ import pandas as pd
 def parse_cli_args() -> Dict:
     """Parses command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Gather library stats from given replicates (pivot table).",
+        description="Gather library stats from all J1 files",
         usage="%(prog)s [-h] replicate1 [replicate2 ...] -o FILE"
     )
     parser.add_argument(
-        "stats", type=str, nargs="+", metavar="FILES",
-        help="input stats files (step = 1)"
+        "stats", type=str, metavar="DIR",
+        help="directory with input stats files (step = 1)"
     )
     parser.add_argument(
         "-o", "--output", type=str, metavar="FILE", required=True,
@@ -23,12 +23,12 @@ def parse_cli_args() -> Dict:
     return vars(args)
 
 
-def stats2df(replicates: List[str]) -> pd.DataFrame:
+def stats2df(j1_directory: str) -> pd.DataFrame:
     """Read replicates' stats and gather all the info into one table."""
     records = []
+    j1_directory = Path(j1_directory)
 
-    for replicate in replicates:
-        p = Path(replicate)
+    for p in j1_directory.glob('*library_stats.txt'):
         name = Path(p.stem).stem
 
         with p.open("r") as f:
