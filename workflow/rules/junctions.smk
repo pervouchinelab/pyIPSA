@@ -119,7 +119,8 @@ checkpoint gather_junction_stats:
                     left, right = line.strip().split(": ")
                     d[left].append(right)
         df = pd.DataFrame(d)
-        df.sort_values(by="replicate")
+	if not df.empty:
+        	df.sort_values(by="replicate")
         df.to_csv(output.tsv, index=False, sep="\t")
 
 
