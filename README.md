@@ -20,11 +20,13 @@ Such environment may be created via conda:
 To install the pipeline:  
 `git clone https://github.com/Leoberium/pyIPSA.git`
 
-To run (test run if samples folder is empty):
+To run (test run if input directory is empty):
 1. Python environment with required libraries
 must be active
 2. Make directory with Snakefile active
 3. Run `snakemake` command
+
+Test run produces empty `aggregated_junction_stats.tsv` file in output directory.
 
 Options for `snakemake` command are available in 
 [snakemake documentation](https://snakemake.readthedocs.io/en/stable/executing/cli.html).
