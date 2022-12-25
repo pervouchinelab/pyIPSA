@@ -74,11 +74,11 @@ def aggregate(df: pd.DataFrame, min_offset: int, read_length: int) -> pd.DataFra
     """Aggregate counts by sites/junction id."""
     max_offset = read_length - min_offset
     df = df[(df["offset"] >= min_offset) & (df["offset"] <= max_offset)]
-    df = df.groupby(["site_id"], as_index=False).agg(
+    df = df.groupby(["site_id"]).agg(
         total_count=pd.NamedAgg(column="count", aggfunc=sum),
         staggered_count=pd.NamedAgg(column="count", aggfunc="count"),
         entropy=pd.NamedAgg(column="count", aggfunc=compute_entropy)
-    )
+    ).reset_index()
     return df
 
 
