@@ -105,14 +105,14 @@ def compute_entropy(x: pd.Series) -> pd.Series:
 def aggregate(df: pd.DataFrame, min_overhang: int) -> pd.DataFrame:
     """Aggregate counts by sites/junction id."""
     df = df[(df["overhang"] >= min_overhang)]
-    df = df.groupby(["polyA_id"], as_index=False).agg(
+    df = df.groupby(["polyA_id"]).agg(
         total_count=pd.NamedAgg(column="count", aggfunc=sum),
         staggered_count=pd.NamedAgg(column="count", aggfunc="count"),
         entropy=pd.NamedAgg(
             column="count",
             aggfunc=compute_entropy
         )
-    )
+    ).reset_index()
     return df
 
 
