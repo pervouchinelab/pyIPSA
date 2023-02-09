@@ -11,7 +11,7 @@ rule index_bam:
         bam_index=INPUT_DIR+"/{sample}.bam.bai"
     conda: "../envs/scripts-common.yaml"
     shell:
-        "python3 -c 'import pysam; pysam.index({input.bam})'"
+        """python3 -c 'import pysam; pysam.index("{input.bam}")'"""
 
 
 rule count_junctions:
