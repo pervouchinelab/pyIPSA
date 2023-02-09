@@ -3,50 +3,68 @@ Integrative Pipeline for Splicing Analysis
 
 [![Documentation Status](https://readthedocs.org/projects/pyipsa/badge/?version=latest)](https://pyipsa.readthedocs.io/en/latest/?badge=latest)
 
-### Installation & Run
 
-To use this program you must have python environment
-with the following programs and libraries installed:
-- `snakemake`
-- `pysam`
-- `pandas`
-- `numpy`
+## Installation & Run
 
-Such environment may be created via conda:  
-1. `conda create -n ipsa`  
-2. `conda activate ipsa`
-3. `conda install -c conda-forge -c bioconda snakemake pysam pandas`
+### Step 1: Obtain a copy of this workflow
 
-To install the pipeline:  
-`git clone https://github.com/Leoberium/pyIPSA.git`
+[Clone](https://help.github.com/en/articles/cloning-a-repository) this repository to your local system, into the place where you want to perform the data analysis.
 
-To run (test run if input directory is empty):
-1. Python environment with required libraries
-must be active
-2. Make directory with Snakefile active
-3. Run `snakemake` command
+    git clone https://github.com/pervouchinelab/pyIPSA.git
+    cd pyIPSA
 
-Test run produces empty `aggregated_junction_stats.tsv` file in output directory.
+### Step 2: Configure workflow
 
-Options for `snakemake` command are available in 
-[snakemake documentation](https://snakemake.readthedocs.io/en/stable/executing/cli.html).
+Configure the workflow according to your needs via editing the files in the `config/` folder. Adjust `config.yaml` to configure the workflow execution.
 
-#### For Arcuda users
+### Step 3: Install Snakemake
 
-Just load module with Python and install libraries:
-1. `module load ScriptLang/python/3.8.3`
-2. `pip3 install --user --upgrade snakemake pandas pysam`
+Install Snakemake using [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html):
 
-After that you can run pipeline using cluster engine:
-`snakemake --cluster qsub --j <number of jobs>`
+    # install mamba package manager if you don't have it
+    conda install -n base -c conda-forge mamba
+    conda create -c bioconda -c conda-forge -n snakemake snakemake
 
-### Working folders
+For installation details, see the [instructions in the Snakemake documentation](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html).
+
+### Step 4: Execute workflow
+
+Activate the conda environment:
+
+    conda activate snakemake
+
+Test your configuration by performing a dry-run via
+
+    snakemake --use-conda -n
+
+Execute the workflow locally via
+
+    snakemake --use-conda --cores $N
+
+using `$N` cores or run it in a cluster environment via
+
+    snakemake --use-conda --cluster qsub --jobs 100
+
+or
+
+    snakemake --use-conda --drmaa --jobs 100
+
+See the [Snakemake documentation](https://snakemake.readthedocs.io/en/stable/executable.html) for further details.
+
+#### For Arkuda users
+Arkuda creates conda environments without execute permissions by default, 
+so you have to create the environments and add the permissions manually. 
+
+    snakemake --use-conda -c1 --conda-create-envs-only
+    chmod +x .snakemake/conda/**/bin/*
+    snakemake --use-conda -c<number of jobs> --cluster 'qsub -d . -l nodes=1:ppn={threads}'
+
+## Working folders
 
 Folder in repository:
 1. `config` - the folder with config file, where you set up your pipeline
-2. `deprecated` - the folder with old scripts not used in workflow
-3. `known_SJ` - the folder with annotated splice junctions
-4. `workflow` - the folder with working scripts of the pipeline
+2. `known_SJ` - the folder with annotated splice junctions
+3. `workflow` - the folder with working scripts of the pipeline
 
 Additional directories created
 1. `genomes` - the folder which stores all downloaded genomes
