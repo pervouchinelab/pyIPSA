@@ -6,10 +6,11 @@ rule count_sites:
         stats=rules.count_junctions.output.library_stats
     output:
         sites=OUTPUT_DIR+"/S1/{sample}.S1.gz"
+    threads: THREADS
     params:
-        threads=THREADS,
         primary=("", "-p")[config["primary"]],
         unique=("", "-u")[config["unique"]]
+    conda: "../envs/scripts-common.yaml"
     shell:
         "python3 -m workflow.scripts.count_sites "
         "-i {input.bam} "
@@ -17,7 +18,7 @@ rule count_sites:
         "-s {input.stats} "
         "-o {output.sites} "
         "{params.primary} {params.unique} "
-        "-t {params.threads}"
+        "-t {threads}"
 
 
 rule aggregate_sites:
@@ -28,6 +29,7 @@ rule aggregate_sites:
         aggregated_sites=OUTPUT_DIR+"/S2/{sample}.S2.gz"
     params:
         min_offset=config["min_offset"]
+    conda: "../envs/scripts-common.yaml"
     shell:
         "python3 -m workflow.scripts.aggregate_sites "
         "-i {input.sites} "
@@ -44,6 +46,7 @@ rule filter_sites:
     params:
         entropy=config["entropy"],
         total_count=config["total_count"]
+    conda: "../envs/scripts-common.yaml"
     shell:
          "python3 -m workflow.scripts.filter "
          "-i {input.aggregated_sites} "
