@@ -10,8 +10,8 @@ rule index_bam:
     output:
         bam_index=INPUT_DIR+"/{sample}.bam.bai"
     conda: "../envs/scripts-common.yaml"
-    run:
-        pysam.index(input.bam)
+    shell:
+        "python3 -c 'pysam.index({input.bam})'"
 
 
 rule count_junctions:
@@ -111,7 +111,6 @@ checkpoint gather_junction_stats:
         junction_stats=expand("{out}/J4/{sample}.junction_stats.txt", out=OUTPUT_DIR, sample=samples)
     output:
         tsv=OUTPUT_DIR+"/aggregated_junction_stats.tsv"
-    conda: "../envs/scripts-common.yaml"
     run:
         d = defaultdict(list)
         for replicate in input.junction_stats:
