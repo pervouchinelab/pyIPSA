@@ -57,7 +57,7 @@ so you have to create the environments and add the permissions manually.
 
     snakemake --use-conda -c1 --conda-create-envs-only
     chmod +x .snakemake/conda/**/bin/*
-    snakemake --use-conda -c<number of jobs> --cluster 'qsub -d . -l nodes=1:ppn={threads}'
+    snakemake --use-conda -j<number of jobs> --cluster 'qsub -d . -l nodes=1:ppn={threads}'
 
 ## Working folders
 
