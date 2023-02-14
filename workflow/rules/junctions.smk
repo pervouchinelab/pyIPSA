@@ -3,6 +3,10 @@ from pathlib import Path
 
 import pandas as pd
 
+# checkpoints and jobs that depend on them should be executed locally, 
+# otherwise they throw errors on Arkuda cluster
+# localrules: gather_library_stats, gather_junction_stats, choose_strand, annotate_junctions
+
 
 rule index_bam:
     input:
@@ -22,10 +26,12 @@ rule count_junctions:
     output:
         junctions=OUTPUT_DIR+"/J1/{sample}.J1.gz",
         library_stats=OUTPUT_DIR + "/J1/{sample}.library_stats.txt"
-    threads: THREADS
     params:
         primary=("", "-p")[config["primary"]],
         unique=("", "-u")[config["unique"]]
+    threads: THREADS
+    resources:
+        mem_mb=10000    
     conda: "../envs/scripts-common.yaml"
     shell:
         "python3 -m workflow.scripts.count_junctions "
@@ -42,6 +48,7 @@ checkpoint gather_library_stats:
         library_stats=expand("{out}/J1/{sample}.library_stats.txt", out=OUTPUT_DIR, sample=samples)
     output:
         tsv=OUTPUT_DIR+"/aggregated_library_stats.tsv"
+    conda: "../envs/scripts-common.yaml" 
     shell:
         "python3 -m workflow.scripts.gather_library_stats "
         "{OUTPUT_DIR}/J1  "
@@ -58,6 +65,8 @@ rule aggregate_junctions:
         min_offset=config["min_offset"],
         min_intron_length=config["min_intron_length"],
         max_intron_length=config["max_intron_length"]
+    resources:
+        mem_mb=10000   
     conda: "../envs/scripts-common.yaml"
     shell:
         "python3 -m workflow.scripts.aggregate_junctions "
@@ -124,8 +133,8 @@ checkpoint gather_junction_stats:
                     left, right = line.strip().split(": ")
                     d[left].append(right)
         df = pd.DataFrame(d)
-	if not df.empty:
-        	df.sort_values(by="replicate")
+        if not df.empty:
+                df.sort_values(by="replicate")
         df.to_csv(output.tsv, index=False, sep="\t")
 
 

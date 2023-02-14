@@ -52,12 +52,23 @@ or
 See the [Snakemake documentation](https://snakemake.readthedocs.io/en/stable/executable.html) for further details.
 
 #### For Arkuda users
+
+Install a profile for Arkuda (adapted from [Snakemake-Profiles/generic](https://github.com/Snakemake-Profiles/generic)):
+
+    mkdir -p ~/.config/snakemake
+    cp -R workflow/profiles/arkuda ~/.config/snakemake
+    chmod +x ~/.config/snakemake/arkuda/*
+
 Arkuda creates conda environments without execute permissions by default, 
 so you have to create the environments and add the permissions manually. 
 
     snakemake --use-conda -c1 --conda-create-envs-only
     chmod +x .snakemake/conda/**/bin/*
-    snakemake --use-conda -j<number of jobs> --cluster 'qsub -d . -l nodes=1:ppn={threads}'
+
+Execute the workflow:
+
+    snakemake --use-conda --default-resources 'mem_mb=5000' 'time_min=60' --profile arkuda2  -j<number of jobs>
+
 
 ## Working folders
 

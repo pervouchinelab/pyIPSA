@@ -6,10 +6,12 @@ rule count_sites:
         stats=rules.count_junctions.output.library_stats
     output:
         sites=OUTPUT_DIR+"/S1/{sample}.S1.gz"
-    threads: THREADS
     params:
         primary=("", "-p")[config["primary"]],
         unique=("", "-u")[config["unique"]]
+    threads: THREADS
+    resources:
+        time_min=240
     conda: "../envs/scripts-common.yaml"
     shell:
         "python3 -m workflow.scripts.count_sites "
