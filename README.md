@@ -67,7 +67,7 @@ so you have to create the environments and add the permissions manually.
 
 Execute the workflow:
 
-    snakemake --use-conda --default-resources 'mem_mb=5000' 'time_min=60' --profile arkuda2  -j<number of jobs>
+    snakemake --use-conda --default-resources 'mem_mb=5000' 'time_min=60' --profile arkuda  -j<number of jobs>
 
 
 ## Working folders
