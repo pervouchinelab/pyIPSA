@@ -6,10 +6,11 @@ rule count_pooled_sites:
         stats=rules.count_junctions.output.library_stats
     output:
         pooled_sites=OUTPUT_DIR+"/PS1/{sample}.PS1.gz"
+    threads: THREADS
     params:
-        threads=THREADS,
         primary=("", "-p")[config["primary"]],
         unique=("", "-u")[config["unique"]]
+    conda: "../envs/scripts-common.yaml"
     shell:
         "python3 -m workflow.scripts.count_sites "
         "-i {input.bam} "
@@ -17,7 +18,7 @@ rule count_pooled_sites:
         "-s {input.stats} "
         "-o {output.pooled_sites} "
         "{params.primary} {params.unique} "
-        "-t {params.threads}"
+        "-t {threads}"
 
 
 rule aggregate_pooled_sites:
@@ -28,6 +29,7 @@ rule aggregate_pooled_sites:
         aggregated_pooled_sites=OUTPUT_DIR+"/PS2/{sample}.PS2.gz"
     params:
         min_offset=config["min_offset"]
+    conda: "../envs/scripts-common.yaml"
     shell:
         "python3 -m workflow.scripts.aggregate_sites "
         "-i {input.sites} "
@@ -44,6 +46,7 @@ rule filter_pooled_sites:
     params:
         entropy=config["entropy"],
         total_count=config["total_count"]
+    conda: "../envs/scripts-common.yaml"
     shell:
          "python3 -m workflow.scripts.filter "
          "-i {input.aggregated_pooled_sites} "
