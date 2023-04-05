@@ -4,7 +4,7 @@ rule compute_rates:
         filtered_sites=rules.filter_sites.output.filtered_sites
     output:
         rates=OUTPUT_DIR+"/R/{sample}.R.gz"
-    conda: "envs/scripts-common.yaml"
+    conda: "../envs/scripts-common.yaml"
     shell:
          "python3 -m workflow.scripts.compute_rates "
          "-j {input.filtered_junctions} "
@@ -18,7 +18,7 @@ rule compute_pooled_rates:
         filtered_pooled_sites=rules.filter_pooled_sites.output.filtered_pooled_sites
     output:
         rates=OUTPUT_DIR+"/PR/{sample}.PR.gz"
-    conda: "envs/scripts-common.yaml"
+    conda: "../envs/scripts-common.yaml"
     shell:
          "python3 -m workflow.scripts.compute_rates "
          "-j {input.filtered_junctions} "
