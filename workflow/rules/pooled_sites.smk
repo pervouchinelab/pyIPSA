@@ -1,7 +1,7 @@
 rule count_pooled_sites:
     input:
-        bam=INPUT_DIR+"/{sample}.bam",
-        bam_index=rules.index_bam.output.bam_index,
+        bam=get_bam_by_sample,
+        bam_index=get_bai_by_sample,
         junctions=rules.merge_junctions.output.merged_junctions,
         stats=rules.count_junctions.output.library_stats
     output:

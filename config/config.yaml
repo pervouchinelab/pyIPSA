@@ -2,7 +2,7 @@
 # STAGE 0: preparation of data
 
 # Folders with input and output data
-input_dir: input
+input_files: "config/samples.tsv"
 output_dir: output
 pooled: False
 

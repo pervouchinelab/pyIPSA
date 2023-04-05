@@ -1,7 +1,7 @@
 rule count_polyA:
     input:
-        bam=INPUT_DIR+"/{sample}.bam",
-        bam_index=rules.index_bam.output.bam_index,
+        bam=get_bam_by_sample,
+        bam_index=get_bai_by_sample,
         library_stats=rules.count_junctions.output.library_stats
     output:
         polyA=OUTPUT_DIR+"/A1/{sample}.A1.gz",

@@ -10,9 +10,9 @@ import pandas as pd
 
 rule index_bam:
     input:
-        bam=INPUT_DIR+"/{sample}.bam"
+        bam="{file}.bam"
     output:
-        bam_index=INPUT_DIR+"/{sample}.bam.bai"
+        bam_index="{file}.bam.bai"
     conda: "../envs/scripts-common.yaml"
     shell:
         """python3 -c 'import pysam; pysam.index("{input.bam}")'"""
@@ -20,8 +20,8 @@ rule index_bam:
 
 rule count_junctions:
     input:
-        bam=INPUT_DIR+"/{sample}.bam",
-        bam_index=rules.index_bam.output.bam_index,
+        bam=get_bam_by_sample,
+        bam_index=get_bai_by_sample,
         known="known_SJ"
     output:
         junctions=OUTPUT_DIR+"/J1/{sample}.J1.gz",
@@ -45,7 +45,7 @@ rule count_junctions:
 
 checkpoint gather_library_stats:
     input:
-        library_stats=expand("{out}/J1/{sample}.library_stats.txt", out=OUTPUT_DIR, sample=samples)
+        library_stats=expand("{out}/J1/{sample}.library_stats.txt", out=OUTPUT_DIR, sample=SAMPLES)
     output:
         tsv=OUTPUT_DIR+"/aggregated_library_stats.tsv"
     conda: "../envs/scripts-common.yaml" 
@@ -117,7 +117,7 @@ rule choose_strand:
 
 checkpoint gather_junction_stats:
     input:
-        junction_stats=expand("{out}/J4/{sample}.junction_stats.txt", out=OUTPUT_DIR, sample=samples)
+        junction_stats=expand("{out}/J4/{sample}.junction_stats.txt", out=OUTPUT_DIR, sample=SAMPLES)
     output:
         tsv=OUTPUT_DIR+"/aggregated_junction_stats.tsv"
     run:
@@ -159,7 +159,7 @@ rule filter_junctions:
 
 rule merge_junctions:
     input:
-         stranded_junctions=expand("{out}/J4/{sample}.J4.gz", sample=samples, out=OUTPUT_DIR)
+         stranded_junctions=expand("{out}/J4/{sample}.J4.gz", sample=SAMPLES, out=OUTPUT_DIR)
     output:
          merged_junctions=OUTPUT_DIR+"/J4/merged_junctions.J4.gz"
     conda: "../envs/scripts-common.yaml"

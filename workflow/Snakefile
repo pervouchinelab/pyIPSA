@@ -1,18 +1,22 @@
 from snakemake.utils import min_version
 min_version("5.30.1")
 
+
 configfile: "config/config.yaml"
 
-INPUT_DIR = config["input_dir"]
-OUTPUT_DIR = config["output_dir"]
-THREADS = config["threads"]
-samples, = glob_wildcards(INPUT_DIR + "/{sample}.bam")
 
-pooling_mode = "P" if config["pooled"] else ""
+include: "rules/common.smk"
+include: "rules/junctions.smk"
+include: "rules/sites.smk"
+include: "rules/genome.smk"
+include: "rules/pooled_sites.smk"
+include: "rules/polyA.smk"
+include: "rules/rates.smk"
+
 
 rule all:
     input:
-        expand("{out}/{p}R/{sample}.{p}R.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode),
+        expand("{out}/{p}R/{sample}.{p}R.gz", sample=SAMPLES, out=OUTPUT_DIR, p=POOLING_MODE),
         OUTPUT_DIR+"/aggregated_junction_stats.tsv"
 
 
@@ -22,48 +26,14 @@ rule J1:
 
 rule J:
     input:
-        expand("{out}/J6/{sample}.J6.gz", sample=samples, out=OUTPUT_DIR),
+        expand("{out}/J6/{sample}.J6.gz", sample=SAMPLES, out=OUTPUT_DIR),
         OUTPUT_DIR+"/aggregated_junction_stats.tsv"
 
 rule S:
     input:
-        expand("{out}/{p}S6/{sample}.{p}S6.gz", sample=samples, out=OUTPUT_DIR, p=pooling_mode),
+        expand("{out}/{p}S6/{sample}.{p}S6.gz", sample=SAMPLES, out=OUTPUT_DIR, p=POOLING_MODE),
         OUTPUT_DIR+"/aggregated_junction_stats.tsv"
 
 rule A:
     input:
-        expand("{out}/A2/{sample}.A2.gz", sample=samples, out=OUTPUT_DIR)
-
-
-include: "rules/junctions.smk"
-include: "rules/sites.smk"
-include: "rules/genome.smk"
-include: "rules/pooled_sites.smk"
-include: "rules/polyA.smk"
-
-rule compute_rates:
-    input:
-        filtered_junctions=rules.filter_junctions.output.filtered_junctions,
-        filtered_sites=rules.filter_sites.output.filtered_sites
-    output:
-        rates=OUTPUT_DIR+"/R/{sample}.R.gz"
-    conda: "envs/scripts-common.yaml"
-    shell:
-         "python3 -m workflow.scripts.compute_rates "
-         "-j {input.filtered_junctions} "
-         "-s {input.filtered_sites} "
-         "-o {output.rates}"
-
-
-rule compute_pooled_rates:
-    input:
-        filtered_junctions=rules.filter_junctions.output.filtered_junctions,
-        filtered_pooled_sites=rules.filter_pooled_sites.output.filtered_pooled_sites
-    output:
-        rates=OUTPUT_DIR+"/PR/{sample}.PR.gz"
-    conda: "envs/scripts-common.yaml"
-    shell:
-         "python3 -m workflow.scripts.compute_rates "
-         "-j {input.filtered_junctions} "
-         "-s {input.filtered_pooled_sites} "
-         "-o {output.rates}"
+        expand("{out}/A2/{sample}.A2.gz", sample=SAMPLES, out=OUTPUT_DIR)
