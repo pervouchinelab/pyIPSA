@@ -48,11 +48,15 @@ checkpoint gather_library_stats:
         library_stats=expand("{out}/J1/{sample}.library_stats.txt", out=OUTPUT_DIR, sample=SAMPLES)
     output:
         tsv=OUTPUT_DIR+"/aggregated_library_stats.tsv"
-    conda: "../envs/scripts-common.yaml" 
-    shell:
-        "python3 -m workflow.scripts.gather_library_stats "
-        "{OUTPUT_DIR}/J1  "
-        "-o {output.tsv}"
+    # conda: "../envs/scripts-common.yaml" 
+    params:
+        sample_names = SAMPLES
+    run:
+        gather_library_stats_fun(input.library_stats, params.sample_names, output.tsv)
+    # shell:
+    #     "python3 -m workflow.scripts.gather_library_stats "
+    #     "{OUTPUT_DIR}/J1  "
+    #     "-o {output.tsv}"
 
 
 rule aggregate_junctions:
@@ -120,11 +124,12 @@ checkpoint gather_junction_stats:
         junction_stats=expand("{out}/J4/{sample}.junction_stats.txt", out=OUTPUT_DIR, sample=SAMPLES)
     output:
         tsv=OUTPUT_DIR+"/aggregated_junction_stats.tsv"
+    params:
+        sample_names = SAMPLES
     run:
         d = defaultdict(list)
-        for replicate in input.junction_stats:
+        for replicate, name in zip(input.junction_stats, params.sample_names):
             p = Path(replicate)
-            name = Path(p.stem).stem
             with p.open("r") as f:
                 d["replicate"].append(name)
                 for line in f:
