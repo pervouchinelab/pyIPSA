@@ -11,7 +11,8 @@ rule count_sites:
         unique=("", "-u")[config["unique"]]
     threads: THREADS
     resources:
-        time_min=240
+        time_min=1000,
+        mem_mb=lambda wildcards, input, attempt: max((input.size//1000000) * attempt, 10000)
     conda: "../envs/scripts-common.yaml"
     shell:
         "python3 -m workflow.scripts.count_sites "

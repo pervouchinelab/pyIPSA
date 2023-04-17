@@ -167,6 +167,8 @@ rule merge_junctions:
          stranded_junctions=expand("{out}/J4/{sample}.J4.gz", sample=SAMPLES, out=OUTPUT_DIR)
     output:
          merged_junctions=OUTPUT_DIR+"/J4/merged_junctions.J4.gz"
+    resources:
+        mem_mb=lambda wildcards, input, attempt: max((input.size//1000000) * attempt, 1000)
     conda: "../envs/scripts-common.yaml"
     shell:
          "python3 -m workflow.scripts.merge_junctions "

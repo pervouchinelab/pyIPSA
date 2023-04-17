@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, List
 import pandas as pd
+import gzip
 
 
 OUTPUT_DIR = config["output_dir"]
@@ -54,3 +55,4 @@ def gather_library_stats2df(fnames, names) -> pd.DataFrame:
 def gather_library_stats_fun(in_files, sample_names, out_file):
     df = gather_library_stats2df(in_files, sample_names)
     df.to_csv(out_file, index=False, sep="\t")
+    
