@@ -69,6 +69,20 @@ Execute the workflow:
 
     snakemake --use-conda --default-resources 'mem_mb=5000' 'time_min=60' --profile arkuda  -j<number of jobs>
 
+## Input and output
+
+Input and output file location is specified in `config/config.yaml`:
+
+    input_files: "config/samples.tsv"
+    output_dir: "/output"
+
+`input_files` should point at a table with two columns, `path` and `name`:
+
+    path    name
+    /location/test-dataset/batch1/sample1/Aligned.sortedByCoord.out.bam  batch1/sample1
+    /location/test-dataset/batch2/sample2/Aligned.sortedByCoord.out.bam  batch2/sample2
+
+The first column describes paths to input bam files, the second file defines the alias for output files. For example, the output of step 4 for the first file will be located in `/output/J4/batch1/sample1.J4.gz`
 
 ## Working folders
 
@@ -80,3 +94,5 @@ Folder in repository:
 Additional directories created
 1. `genomes` - the folder which stores all downloaded genomes
 2. `annotations` - the folder which stores all downloaded annotations
+
+
