@@ -2,10 +2,6 @@
 
 BASE = 1
 
-AVAILABLE_GENOMES = [
-    "dm3", "dm6", "mm9", "mm10", "hg19", "hg38"
-]
-
 # This set contains only relevant reference names.
 # It is used to filter out redundant names
 # which are sometimes present in alignment files

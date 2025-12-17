@@ -1,12 +1,13 @@
 import gzip
 import sys
 import time
-from typing import List, Set, Tuple, Dict
+from typing import List, Set, Tuple, Dict, Optional
+from pathlib import Path
 
 from .ipsa_config import *
 
 
-def load_pairs(dir_path: str) -> Dict[str, Set[Tuple[int, int]]]:
+def load_pairs(dir_path: str, genomes: Optional[List] = None) -> Dict[str, Set[Tuple[int, int]]]:
     """
     Load start-stop pairs from all known junctions.
     
@@ -14,8 +15,11 @@ def load_pairs(dir_path: str) -> Dict[str, Set[Tuple[int, int]]]:
     :return: dictionary mapping genome to all its junctions' start-stop pairs
     """
     junctions_by_genome = dict()
+    if not genomes:
+        sj_suffix = ".ss.tsv.gz"
+        genomes = [file.name.removesuffix(sj_suffix) for file in Path(dir_path).glob("*" + sj_suffix)]
 
-    for genome in AVAILABLE_GENOMES:
+    for genome in genomes:
         pairs = set()
         with gzip.open(dir_path + f"/{genome}.ss.tsv.gz", "rt") as f:
             for line in f:
